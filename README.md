@@ -1,27 +1,59 @@
 # Read2Post
 
-Read2Post is an Agent-powered writing workspace that turns reading notes, excerpts, and rough personal ideas into editable WeChat/blog drafts.
+<p align="center">
+  <strong>把阅读笔记、摘录和粗糙想法，变成可编辑的公众号 / 博客草稿。</strong>
+</p>
 
-It is designed around a visible Agent workflow: parse the material, clarify the idea, optionally enrich it with web search, generate topics and an outline, write the article, review quality, check factual risk, revise once, optimize titles, and export Markdown.
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#roadmap">Roadmap</a>
+</p>
 
-## Why It Exists
+<p align="center">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg" />
+  <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB.svg" />
+  <img alt="Backend" src="https://img.shields.io/badge/backend-FastAPI-009688.svg" />
+  <img alt="Agent" src="https://img.shields.io/badge/agent-OpenAI--compatible-black.svg" />
+</p>
 
-Reading notes often stay as fragments. Read2Post helps transform those fragments into publishable writing while keeping the reasoning process visible enough for the user to inspect, edit, and improve.
+Read2Post 是一个 Agent 驱动的写作工作台，面向经常阅读、记录、思考，并希望持续输出内容的人。
+
+它会把碎片化的读书笔记、摘录和个人想法，整理成一条可见的写作流程：解析素材、打磨想法、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、优化标题，最后导出 Markdown。
+
+目标很简单：让 AI 处理繁重的第一稿，但保留你的思考、判断和个人表达。
 
 ## Features
 
-- Turn reading notes or rough ideas into long-form article drafts.
-- Generate topic candidates before committing to one direction.
-- Produce outline, article draft, and title candidates.
-- Review article quality and factual risk.
-- Revise the draft automatically when quality or risk checks fail.
-- Learn a personal writing style profile from edited final drafts.
-- Export the final article as Markdown.
-- Use real OpenAI-compatible LLM APIs and Tavily search. No local mock fallback.
+- 把阅读笔记、摘录、论文笔记或粗糙想法转成长文草稿。
+- 在正式写作前生成多个选题方向，方便选择角度。
+- 自动生成大纲、正文草稿和标题候选。
+- 对文章质量做审稿，并检查可能缺少来源支撑的事实表达。
+- 当评分或事实风险不达标时，自动进行一次克制修订。
+- 从用户确认过的最终稿中学习个人写作风格。
+- 支持导出 Markdown，适合公众号、博客和个人知识库。
+- 使用真实 OpenAI-compatible LLM API，可选接入 Tavily 联网搜索。
+
+## Workflow
+
+```mermaid
+flowchart LR
+  A[Reading Notes] --> B[Material Parser]
+  B --> C[Idea Clarifier]
+  C --> D[Topic Generator]
+  D --> E[Outline Generator]
+  E --> F[Article Writer]
+  F --> G[Quality Review]
+  G --> H[Fact Review]
+  H --> I[Revision]
+  I --> J[Title Optimizer]
+  J --> K[Markdown Export]
+```
 
 ## Architecture
 
-Read2Post uses a frontend/backend split with a layered Agent backend.
+![Read2Post architecture](docs/figures/overall_architecture.png)
 
 ```text
 React / Vite UI
@@ -31,38 +63,35 @@ React / Vite UI
   -> Tools: LLM client, Tavily search, local storage, Markdown export
 ```
 
-The core orchestration lives in:
+核心文件：
 
 - `backend/app/agents/read2post_agent.py`
 - `backend/app/agents/skills/`
 - `backend/app/agents/tools/`
+- `frontend/src/pages/WritingStudio.tsx`
 
 ## Tech Stack
 
-- Frontend: React, TypeScript, Vite, lucide-react
-- Backend: FastAPI, Pydantic, SQLAlchemy, SQLite
-- Agent runtime: single orchestrator Agent + multiple Skills + Tools
-- Storage: local Markdown / JSON files and SQLite
-- Deployment: local dev scripts or Docker Compose
-
-## Requirements
-
-- Python 3.9+
-- Node.js 18+
-- An OpenAI-compatible chat completions API key
-- Optional: Tavily API key if web search is enabled
+| 层级 | 技术 |
+| --- | --- |
+| 前端 | React, TypeScript, Vite, lucide-react |
+| 后端 | FastAPI, Pydantic, SQLAlchemy |
+| Agent | OpenAI-compatible Chat Completions API |
+| 搜索 | Tavily Search API |
+| 存储 | 本地 Markdown / JSON 文件 |
+| 部署 | Docker Compose |
 
 ## Quick Start
 
-### 1. Configure backend environment
+### 1. 配置后端环境
 
-Create `backend/.env` from the example:
+从示例文件创建 `backend/.env`：
 
 ```powershell
 copy backend\.env.example backend\.env
 ```
 
-Edit `backend/.env`:
+编辑 `backend/.env`：
 
 ```env
 APP_NAME=Read2Post
@@ -80,11 +109,11 @@ TAVILY_API_KEY=your_tavily_key
 MIN_REVIEW_SCORE=88
 ```
 
-DeepSeek, Qwen, and other OpenAI-compatible providers can be used by changing `OPENAI_BASE_URL` and `OPENAI_MODEL`.
+DeepSeek、Qwen 或其他兼容 OpenAI Chat Completions 的服务，可以通过修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 接入。
 
-If you do not have a Tavily key, turn off web search in the UI before generating.
+如果没有 Tavily key，请在生成前关闭 UI 里的联网搜索。
 
-### 2. Run the backend
+### 2. 启动后端
 
 ```powershell
 cd backend
@@ -94,13 +123,13 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Backend docs:
+后端接口文档：
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-### 3. Run the frontend
+### 3. 启动前端
 
 ```powershell
 cd frontend
@@ -116,15 +145,13 @@ http://localhost:5173
 
 ## Docker
 
-Docker files are included for deployment and architecture documentation.
-
-Before using Docker Compose, create `backend/.env` as described above.
+使用 Docker Compose 前，请先创建 `backend/.env`。
 
 ```powershell
 docker compose up --build
 ```
 
-Services:
+服务地址：
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:8000`
@@ -134,51 +161,42 @@ Services:
 ```text
 backend/
   app/
-    agents/       Agent orchestration, skills, tools, prompts
-    api/          FastAPI routers
-    core/         settings and database setup
-    models/       SQLAlchemy models
-    schemas/      Pydantic request/response models
-  requirements.txt
+    agents/       Agent 编排、Skills、Tools、Prompts
+    api/          FastAPI 路由
+    core/         配置和数据库初始化
+    models/       SQLAlchemy 模型
+    schemas/      Pydantic 请求 / 响应模型
 
 frontend/
   src/
-    api/          REST client and TypeScript types
-    components/   reusable panels and cards
-    pages/        writing workspace
+    api/          REST 客户端和 TypeScript 类型
+    components/   可复用 UI 面板
+    pages/        写作工作台页面
 
 docs/
-  figures/        architecture diagrams
-  *.pdf / *.docx  course architecture document
+  figures/        架构图
+  *.pdf / *.docx  架构文档
 ```
-
-## Runtime Data
-
-Generated articles, materials, style memory, run logs, local database files, virtual environments, dependency folders, and `.env` files are intentionally ignored by Git.
-
-Do not commit:
-
-- `backend/.env`
-- `backend/read2post.db`
-- `backend/storage/`
-- `backend/.venv/`
-- `frontend/node_modules/`
-- `frontend/dist/`
-- `*.log`
 
 ## Roadmap
 
-- Streaming generation progress.
-- Article version history and diff view.
-- Stronger citation and source validation.
-- More platform templates.
-- Background task queue for long-running workflows.
-- Better onboarding for API provider setup.
-- Hosted demo deployment.
+- 流式展示生成进度。
+- 文章版本历史和 diff 对比。
+- 更强的引用、来源校验和事实追踪。
+- 更多平台模板。
+- 长任务后台队列。
+- 更友好的 API Provider 配置引导。
+- 在线 Demo 部署。
+
+## Contributing
+
+这个项目还在持续进化中，欢迎提交 Issue、功能建议、Prompt 优化、UI 改进和文档补充。
+
+如果 Read2Post 帮你把阅读变成了写作，欢迎给它一个 Star，让更多创作者看到它。
 
 ## Security
 
-This is a BYOK project: you bring your own LLM/search API keys. Keep keys in `backend/.env`; never commit them to GitHub.
+Read2Post 是 BYOK 项目：你需要使用自己的 LLM 和搜索 API key。请把密钥保存在 `backend/.env`，不要提交到 GitHub。
 
 ## License
 
