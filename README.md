@@ -1,13 +1,14 @@
 # NoteForge-AI
 
 <p align="center">
-  <strong>把阅读笔记、摘录和粗糙想法，变成可编辑的公众号 / 博客草稿。</strong>
+  <strong>把阅读笔记、摘录和粗糙想法，锻造成可编辑的公众号 / 博客草稿。</strong>
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> ·
   <a href="#features">Features</a> ·
+  <a href="#workflow">Workflow</a> ·
   <a href="#architecture">Architecture</a> ·
+  <a href="#quick-start">Quick Start</a> ·
   <a href="#roadmap">Roadmap</a>
 </p>
 
@@ -18,7 +19,7 @@
   <img alt="Agent" src="https://img.shields.io/badge/agent-OpenAI--compatible-black.svg" />
 </p>
 
-Read2Post 是一个 Agent 驱动的写作工作台，面向经常阅读、记录、思考，并希望持续输出内容的人。
+NoteForge-AI 是一个 Agent 驱动的写作工作台，面向经常阅读、记录、思考，并希望持续输出内容的人。
 
 它会把碎片化的读书笔记、摘录和个人想法，整理成一条可见的写作流程：解析素材、打磨想法、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、优化标题，最后导出 Markdown。
 
@@ -39,28 +40,37 @@ Read2Post 是一个 Agent 驱动的写作工作台，面向经常阅读、记录
 
 ```mermaid
 flowchart LR
-  A[Reading Notes] --> B[Material Parser]
-  B --> C[Idea Clarifier]
-  C --> D[Topic Generator]
-  D --> E[Outline Generator]
-  E --> F[Article Writer]
-  F --> G[Quality Review]
-  G --> H[Fact Review]
-  H --> I[Revision]
-  I --> J[Title Optimizer]
-  J --> K[Markdown Export]
+  A[阅读笔记] --> B[素材解析]
+  B --> C[想法打磨]
+  C --> D{是否联网搜索}
+  D -->|是| E[资料摘要]
+  D -->|否| F[生成选题]
+  E --> F
+  F --> G[生成大纲]
+  G --> H[撰写正文]
+  H --> I[质量检查]
+  I --> J[事实风险检查]
+  J --> K[自动修订]
+  K --> L[标题优化]
+  L --> M[Markdown 导出]
 ```
 
 ## Architecture
 
-![Read2Post architecture](docs/figures/overall_architecture.png)
-
-```text
-React / Vite UI
-  -> FastAPI REST API
-  -> Read2PostAgent orchestrator
-  -> Skills: parse, clarify, search digest, topic, outline, write, review, revise, title, style memory
-  -> Tools: LLM client, Tavily search, local storage, Markdown export
+```mermaid
+flowchart TB
+  UI[React / Vite UI] --> API[FastAPI REST API]
+  API --> Agent[Agent Orchestrator]
+  Agent --> Skills[Skills Layer]
+  Agent --> Tools[Tools Layer]
+  Skills --> S1[Material Parser]
+  Skills --> S2[Idea Clarifier]
+  Skills --> S3[Topic / Outline / Writer]
+  Skills --> S4[Review / Fact Review / Revision]
+  Skills --> S5[Title Optimizer / Style Memory]
+  Tools --> T1[LLM Client]
+  Tools --> T2[Tavily Search]
+  Tools --> T3[Local Markdown / JSON Storage]
 ```
 
 核心文件：
@@ -94,7 +104,7 @@ copy backend\.env.example backend\.env
 编辑 `backend/.env`：
 
 ```env
-APP_NAME=Read2Post
+APP_NAME=NoteForge-AI
 DATABASE_URL=sqlite:///./read2post.db
 STORAGE_DIR=storage
 
@@ -137,7 +147,7 @@ npm install
 npm.cmd run dev
 ```
 
-Frontend:
+前端页面：
 
 ```text
 http://localhost:5173
@@ -192,11 +202,11 @@ docs/
 
 这个项目还在持续进化中，欢迎提交 Issue、功能建议、Prompt 优化、UI 改进和文档补充。
 
-如果 Read2Post 帮你把阅读变成了写作，欢迎给它一个 Star，让更多创作者看到它。
+如果 NoteForge-AI 帮你把阅读变成了写作，欢迎给它一个 Star，让更多创作者看到它。
 
 ## Security
 
-Read2Post 是 BYOK 项目：你需要使用自己的 LLM 和搜索 API key。请把密钥保存在 `backend/.env`，不要提交到 GitHub。
+NoteForge-AI 是 BYOK 项目：你需要使用自己的 LLM 和搜索 API key。请把密钥保存在 `backend/.env`，不要提交到 GitHub。
 
 ## License
 
