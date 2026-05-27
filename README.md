@@ -1,4 +1,4 @@
-# Read2Post
+# NoteForge-AI
 
 <p align="center">
   <strong>把阅读笔记、摘录和粗糙想法，变成可编辑的公众号 / 博客草稿。</strong>
