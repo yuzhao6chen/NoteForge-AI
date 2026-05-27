@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    container_name: read2post_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/storage:/app/storage
+      - ./backend/read2post.db:/app/read2post.db
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    build: ./frontend
+    container_name: read2post_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

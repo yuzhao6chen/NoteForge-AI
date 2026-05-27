@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+read2post.db
+storage/
+*.log
