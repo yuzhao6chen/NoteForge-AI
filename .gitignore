@@ -40,3 +40,13 @@ Thumbs.db
 
 # Temporary screenshots and local QA artifacts
 frontend/ui-*.png
+
+# Generated documents in docs
+docs/*.pdf
+docs/*.PDF
+docs/*.docx
+docs/*.DOCX
+docs/**/*.pdf
+docs/**/*.PDF
+docs/**/*.docx
+docs/**/*.DOCX
