@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.agents.read2post_agent import Read2PostAgent
+from app.agents.noteforge_agent import NoteForgeAgent
 from app.agents.tools.local_storage import LocalStorageTool
 from app.schemas.profile import StyleProfileSaveRequest, StyleProfileUpdateRequest
 
@@ -24,7 +24,7 @@ def update_style_profile_from_final(payload: StyleProfileUpdateRequest):
     storage = LocalStorageTool()
     current = storage.read_style_profile()
 
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     updated_profile = agent.update_style_profile_from_final(
         current_profile=current.get("profile", {}),
         final_article=payload.final_article,

@@ -4,8 +4,6 @@ import {
   BookOpen,
   Download,
   FileText,
-  Loader2,
-  RefreshCw,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -14,7 +12,9 @@ import {
 } from 'lucide-react'
 import {
   exportArticleContent,
+  getModelOptions,
   getStyleMemory,
+  ModelOption,
   runFullWorkflow,
   StyleMemory,
   updateStyleMemoryFromFinal,
@@ -45,6 +45,9 @@ export default function WritingStudio() {
   const [style, setStyle] = useState('真诚、自然、有个人感')
   const [targetReader, setTargetReader] = useState('大学生和自学者')
   const [targetLength, setTargetLength] = useState(1200)
+  const [llmModel, setLlmModel] = useState('')
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
+  const [qualityMode, setQualityMode] = useState('balanced')
   const [enableWebSearch, setEnableWebSearch] = useState(true)
   const [autoRevise, setAutoRevise] = useState(true)
   const [useStyleMemory, setUseStyleMemory] = useState(true)
@@ -73,6 +76,14 @@ export default function WritingStudio() {
       })
       .catch(() => {
         if (active) setStyleMemory(null)
+      })
+
+    getModelOptions()
+      .then(data => {
+        if (active) setModelOptions(data.models || [])
+      })
+      .catch(() => {
+        if (active) setModelOptions([])
       })
 
     return () => {
@@ -111,6 +122,8 @@ export default function WritingStudio() {
         auto_revise: autoRevise,
         style_reference: styleReference,
         use_style_memory: useStyleMemory,
+        llm_model: llmModel || undefined,
+        quality_mode: qualityMode,
       })
       setResult(data)
       setEditedArticle(data.article)
@@ -176,22 +189,7 @@ export default function WritingStudio() {
   const risk = result?.fact_review?.overall_risk || 'low'
 
   return (
-    <div className="studio">
-      <header className="app-header">
-        <div className="brand-block">
-          <span className="brand-mark">R2P</span>
-          <div>
-            <h1>Read2Post</h1>
-            <p>阅读笔记到公众号 / 博客草稿</p>
-          </div>
-        </div>
-        <div className="header-status">
-          <span>{result ? '已有草稿' : '待生成'}</span>
-          {loading && <Loader2 className="spin" size={18} />}
-        </div>
-      </header>
-
-      <main className="studio-shell">
+    <main className="studio-shell">
         {error && <div className="error">{error}</div>}
 
         <section className="compose-section">
@@ -242,6 +240,27 @@ export default function WritingStudio() {
                 <div>
                   <label>目标字数</label>
                   <input type="number" value={targetLength} onChange={e => setTargetLength(Number(e.target.value))} />
+                </div>
+              </div>
+
+              <div className="two-col">
+                <div>
+                  <label>模型</label>
+                  <select value={llmModel} onChange={e => setLlmModel(e.target.value)}>
+                    <option value="">使用 .env 默认{defaultModelLabel(modelOptions)}</option>
+                    {modelOptions.map(option => (
+                      <option key={option.id} value={option.id} disabled={option.deprecated}>
+                        {option.label}{option.is_default ? '（默认）' : ''}{option.deprecated ? '（将弃用）' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>质量模式</label>
+                  <select value={qualityMode} onChange={e => setQualityMode(e.target.value)}>
+                    <option value="balanced">均衡</option>
+                    <option value="deep">深度打磨</option>
+                  </select>
                 </div>
               </div>
 
@@ -322,6 +341,13 @@ export default function WritingStudio() {
                 <p className={result.revision.applied ? 'revision-note applied' : 'revision-note'}>
                   <ShieldCheck size={16} />
                   {result.revision.reason}
+                </p>
+              )}
+
+              {result.polish && (
+                <p className={result.polish.applied ? 'revision-note applied' : 'revision-note'}>
+                  <Sparkles size={16} />
+                  {result.polish.reason}
                 </p>
               )}
 
@@ -472,8 +498,7 @@ export default function WritingStudio() {
             <AgentStepTimeline loading={loading} hasResult={false} />
           </section>
         )}
-      </main>
-    </div>
+    </main>
   )
 }
 
@@ -493,4 +518,9 @@ function resizeTextarea(element: HTMLTextAreaElement | null) {
   if (!element) return
   element.style.height = 'auto'
   element.style.height = `${element.scrollHeight}px`
+}
+
+function defaultModelLabel(options: ModelOption[]) {
+  const defaultOption = options.find(option => option.is_default)
+  return defaultOption ? `（${defaultOption.label}）` : ''
 }

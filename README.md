@@ -32,6 +32,7 @@ NoteForge-AI 是一个 Agent 驱动的写作工作台，面向经常阅读、记
 - 自动生成大纲、正文草稿和标题候选。
 - 对文章质量做审稿，并检查可能缺少来源支撑的事实表达。
 - 当评分或事实风险不达标时，自动进行一次克制修订。
+- 公众号深度打磨模式会额外进行一次编辑精修，优化开头、节奏、小标题和结尾收束。
 - 从用户确认过的最终稿中学习个人写作风格。
 - 支持导出 Markdown，适合公众号、博客和个人知识库。
 - 使用真实 OpenAI-compatible LLM API，可选接入 Tavily 联网搜索。
@@ -51,8 +52,9 @@ flowchart LR
   H --> I[质量检查]
   I --> J[事实风险检查]
   J --> K[自动修订]
-  K --> L[标题优化]
-  L --> M[Markdown 导出]
+  K --> L[公众号精修]
+  L --> M[标题优化]
+  M --> N[Markdown 导出]
 ```
 
 ## Architecture
@@ -75,7 +77,7 @@ flowchart TB
 
 核心文件：
 
-- `backend/app/agents/read2post_agent.py`
+- `backend/app/agents/noteforge_agent.py`
 - `backend/app/agents/skills/`
 - `backend/app/agents/tools/`
 - `frontend/src/pages/WritingStudio.tsx`
@@ -105,13 +107,18 @@ copy backend\.env.example backend\.env
 
 ```env
 APP_NAME=NoteForge-AI
-DATABASE_URL=sqlite:///./read2post.db
+DATABASE_URL=sqlite:///./noteforge.db
 STORAGE_DIR=storage
 
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your_api_key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.deepseek.com
+OPENAI_MODEL=deepseek-v4-flash
+LLM_MODEL_OPTIONS=
+LLM_REQUEST_TIMEOUT=180
+
+# 如果不填 LLM_MODEL_OPTIONS，DeepSeek 配置下会自动显示：
+# deepseek-v4-flash 和 deepseek-v4-pro
 
 SEARCH_PROVIDER=tavily
 TAVILY_API_KEY=your_tavily_key
@@ -119,7 +126,7 @@ TAVILY_API_KEY=your_tavily_key
 MIN_REVIEW_SCORE=88
 ```
 
-DeepSeek、Qwen 或其他兼容 OpenAI Chat Completions 的服务，可以通过修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 接入。
+DeepSeek、Qwen 或其他兼容 OpenAI Chat Completions 的服务，可以通过修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 接入。前端也支持在生成时选择本次使用的模型，例如 `deepseek-v4-flash` 或 `deepseek-v4-pro`。
 
 如果没有 Tavily key，请在生成前关闭 UI 里的联网搜索。
 

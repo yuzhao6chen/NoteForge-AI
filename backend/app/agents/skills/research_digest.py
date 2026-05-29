@@ -7,7 +7,7 @@ class ResearchDigestSkill:
 
     def run(self, material_analysis: dict, search_results: list[dict]) -> str:
         system = """
-你是 Read2Post 的搜索结果整理 Skill。
+你是 NoteForge-AI 的搜索结果整理 Skill。
 
 请把外部资料整理成写作可用素材，不要直接复制原文。
 你必须保留来源线索：每条可用信息都要标注对应标题或 URL。

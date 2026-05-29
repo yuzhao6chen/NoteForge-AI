@@ -17,6 +17,17 @@ class WritingRequest(BaseModel):
     auto_revise: bool = True
     style_reference: str = Field(default="", max_length=12000)
     use_style_memory: bool = True
+    llm_model: Optional[str] = Field(default=None, max_length=100)
+    quality_mode: str = "balanced"
+
+
+class ArticleAssessmentRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    content: str = Field(min_length=50)
+    platform: str = "wechat"
+    target_reader: str = "公众号读者"
+    use_style_memory: bool = True
+    llm_model: Optional[str] = Field(default=None, max_length=100)
 
 
 class ParseMaterialRequest(BaseModel):
@@ -61,6 +72,7 @@ class WriteArticleRequest(BaseModel):
     style_profile: Dict[str, Any] = Field(default_factory=dict)
     target_length: int = Field(default=1200, ge=300, le=5000)
     target_reader: str = "大学生和自学者"
+    quality_mode: str = "balanced"
 
 
 class ReviewArticleRequest(BaseModel):
@@ -81,3 +93,4 @@ class ReviseArticleRequest(BaseModel):
     style_profile: Dict[str, Any] = Field(default_factory=dict)
     target_length: int = Field(default=1200, ge=300, le=5000)
     target_reader: str = "大学生和自学者"
+    quality_mode: str = "balanced"

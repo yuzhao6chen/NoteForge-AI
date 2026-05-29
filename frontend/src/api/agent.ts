@@ -14,6 +14,33 @@ export interface WritingRequest {
   auto_revise: boolean
   style_reference: string
   use_style_memory: boolean
+  llm_model?: string
+  quality_mode: string
+}
+
+export interface ModelOption {
+  id: string
+  label: string
+  description?: string
+  provider?: string
+  deprecated?: boolean
+  is_default?: boolean
+}
+
+export interface ModelOptionsResponse {
+  provider: string
+  base_url: string
+  default_model: string
+  models: ModelOption[]
+}
+
+export interface ArticleAssessmentRequest {
+  title: string
+  content: string
+  platform: string
+  target_reader: string
+  use_style_memory: boolean
+  llm_model?: string
 }
 
 export interface Topic {
@@ -27,19 +54,46 @@ export interface Topic {
 
 export interface Review {
   score?: number
+  quality_gate?: { publishable?: boolean; needs_revision?: boolean; reason?: string }
+  score_breakdown?: {
+    clarity?: number
+    opening_hook?: number
+    structure?: number
+    argument_progression?: number
+    personal_voice?: number
+    specificity?: number
+    platform_fit?: number
+    ending?: number
+  }
   strengths?: string[]
   problems?: string[]
   suggestions?: string[]
+  must_fix?: Array<{ area?: string; problem?: string; fix?: string; priority?: 'high' | 'medium' | 'low' }>
+  rewrite_targets?: Array<{ section?: string; instruction?: string }>
+  revision_priority?: 'none' | 'light' | 'medium' | 'heavy'
   risk?: string
   platform_fit?: { platform?: string; fit_score?: number; comment?: string }
   personal_voice?: { score?: number; comment?: string }
   originality_risk?: { level?: string; comment?: string }
+  wechat_editorial?: {
+    hook_score?: number
+    mobile_readability_score?: number
+    title_section_fit_score?: number
+    emotional_resonance_score?: number
+    comment?: string
+  }
 }
 
 export interface Revision {
   applied: boolean
   reason: string
   threshold: number
+}
+
+export interface Polish {
+  applied: boolean
+  reason: string
+  error?: string
 }
 
 export interface SourceCard {
@@ -66,6 +120,106 @@ export interface FactReview {
   claims?: FactClaim[]
   blocked_phrases?: string[]
   safe_to_publish?: boolean
+}
+
+export interface PublishGate {
+  can_publish: boolean
+  decision: 'ready' | 'revise' | 'hold'
+  score_threshold: number
+  blocking_items: string[]
+  warnings: string[]
+}
+
+export interface StyleAlignment {
+  score?: number
+  comment?: string
+  matched_traits?: string[]
+  off_track_traits?: string[]
+}
+
+export interface EditorialChecklistItem {
+  item: string
+  status: 'pass' | 'watch' | 'fail'
+  note: string
+  fix?: string
+}
+
+export interface PriorityFix {
+  priority: 'high' | 'medium' | 'low'
+  area: string
+  issue: string
+  suggestion: string
+  replacement?: string
+}
+
+export interface RewriteSample {
+  section: string
+  before: string
+  after: string
+  reason: string
+}
+
+export interface TitleOption {
+  title: string
+  reason: string
+  angle: string
+  style_fit: string
+  recommended: boolean
+}
+
+export interface CoreDiagnosis {
+  main_argument?: string
+  reader_takeaway?: string
+  biggest_gap?: string
+  best_next_move?: string
+}
+
+export interface PracticalRevisionStep {
+  step: number
+  target: string
+  action: string
+  expected_effect: string
+}
+
+export interface SectionDiagnosis {
+  section: string
+  status: 'keep' | 'improve' | 'rewrite'
+  problem: string
+  fix: string
+  rewrite_hint?: string
+}
+
+export interface ArticleAssessment {
+  publish_decision?: 'ready' | 'revise' | 'hold'
+  overall_summary?: string
+  core_diagnosis?: CoreDiagnosis
+  style_alignment?: StyleAlignment
+  editorial_checklist?: EditorialChecklistItem[]
+  priority_fixes?: PriorityFix[]
+  practical_revision_plan?: PracticalRevisionStep[]
+  section_diagnosis?: SectionDiagnosis[]
+  rewrite_samples?: RewriteSample[]
+  final_advice?: string
+}
+
+export interface ArticleAssessmentResult {
+  title: string
+  input_title?: string
+  titles: string[]
+  title_options?: TitleOption[]
+  platform: string
+  target_reader: string
+  review: Review
+  fact_review: FactReview
+  original_article?: string
+  revised_article?: string
+  assessment: ArticleAssessment
+  publish_gate: PublishGate
+  style_profile: StyleProfile
+  style_memory_used?: boolean
+  llm_model?: string
+  assessment_run_id?: string
+  assessment_run_path?: string
 }
 
 export interface StyleProfile {
@@ -122,12 +276,23 @@ export interface WorkflowResult {
   initial_review?: Review
   initial_fact_review?: FactReview
   revision?: Revision
+  polish?: Polish
+  llm_model?: string
+  quality_mode?: string
   article_id?: string
   material_id?: string
 }
 
 export function runFullWorkflow(payload: WritingRequest) {
   return postJson<WorkflowResult>('/api/agent/full-workflow', payload)
+}
+
+export function getModelOptions() {
+  return getJson<ModelOptionsResponse>('/api/agent/model-options')
+}
+
+export function assessArticle(payload: ArticleAssessmentRequest) {
+  return postJson<ArticleAssessmentResult>('/api/agent/assess-article', payload)
 }
 
 export function exportArticle(articleId: string) {

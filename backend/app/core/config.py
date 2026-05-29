@@ -1,17 +1,24 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
 class Settings(BaseSettings):
-    app_name: str = "Read2Post"
-    database_url: str = "sqlite:///./read2post.db"
+    app_name: str = "NoteForge-AI"
+    database_url: str = "sqlite:///./noteforge.db"
     storage_dir: str = "storage"
 
-    # LLM：这里虽然叫 openai，但实际表示 OpenAI-compatible 接口
-    # DeepSeek / 千问 都可以填在这里
+    # The provider name is "openai" because this project uses
+    # OpenAI-compatible Chat Completions APIs such as OpenAI, DeepSeek, or Qwen.
     llm_provider: str = "openai"
     openai_api_key: str = ""
-    openai_base_url: str = "https://api.openai.com/v1"
-    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.deepseek.com"
+    openai_model: str = "deepseek-v4-flash"
+    llm_model_options: str = ""
+    llm_request_timeout: int = 180
 
     # Search
     search_provider: str = "tavily"
@@ -22,7 +29,7 @@ class Settings(BaseSettings):
     min_review_score: int = 88
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

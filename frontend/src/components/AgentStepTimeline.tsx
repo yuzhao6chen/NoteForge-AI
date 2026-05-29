@@ -3,7 +3,7 @@ interface Props {
   hasResult: boolean
 }
 
-const steps = ['素材解析', '想法打磨', '搜索增强', '生成选题', '生成大纲', '正文写作', '文章检查', '自动修订', '标题优化', '保存草稿']
+const steps = ['素材解析', '想法打磨', '搜索增强', '生成选题', '生成大纲', '正文写作', '文章检查', '自动修订', '公众号精修', '标题优化', '保存草稿']
 
 export default function AgentStepTimeline({ loading, hasResult }: Props) {
   return (

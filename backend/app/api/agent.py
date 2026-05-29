@@ -9,16 +9,23 @@ from app.schemas.agent import (
     WriteArticleRequest,
     ReviewArticleRequest,
     ReviseArticleRequest,
+    ArticleAssessmentRequest,
 )
-from app.agents.read2post_agent import Read2PostAgent
+from app.agents.noteforge_agent import NoteForgeAgent
+from app.agents.llm_client import get_llm_model_options
 from app.agents.tools.local_storage import LocalStorageTool
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 
+@router.get("/model-options")
+def model_options():
+    return get_llm_model_options()
+
+
 @router.post("/parse-material")
 def parse_material(payload: ParseMaterialRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.parse_material(
         payload.title,
         payload.content,
@@ -34,7 +41,7 @@ def parse_material(payload: ParseMaterialRequest):
 
 @router.post("/clarify-idea")
 def clarify_idea(payload: ClarifyIdeaRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     material_analysis = payload.material_analysis
     if not material_analysis:
         material_analysis = agent.parse_material(payload.title, payload.content, "idea", payload.title)
@@ -56,7 +63,7 @@ def clarify_idea(payload: ClarifyIdeaRequest):
 
 @router.post("/generate-topics")
 def generate_topics(payload: GenerateTopicsRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.generate_topics(
         payload.material_analysis,
         payload.research_digest,
@@ -72,7 +79,7 @@ def generate_topics(payload: GenerateTopicsRequest):
 
 @router.post("/generate-outline")
 def generate_outline(payload: GenerateOutlineRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.generate_outline(
         payload.selected_topic,
         payload.material_analysis,
@@ -88,7 +95,7 @@ def generate_outline(payload: GenerateOutlineRequest):
 
 @router.post("/write-article")
 def write_article(payload: WriteArticleRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.write_article(
         payload.selected_topic,
         payload.outline,
@@ -101,6 +108,7 @@ def write_article(payload: WriteArticleRequest):
         payload.style_profile,
         payload.target_length,
         payload.target_reader,
+        payload.quality_mode,
     )
 
     storage = LocalStorageTool()
@@ -111,7 +119,7 @@ def write_article(payload: WriteArticleRequest):
 
 @router.post("/review-article")
 def review_article(payload: ReviewArticleRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.review_article(payload.title, payload.content, payload.platform)
 
     storage = LocalStorageTool()
@@ -122,7 +130,7 @@ def review_article(payload: ReviewArticleRequest):
 
 @router.post("/revise-article")
 def revise_article(payload: ReviseArticleRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     result = agent.revise_article(
         payload.selected_topic,
         payload.article,
@@ -135,6 +143,7 @@ def revise_article(payload: ReviseArticleRequest):
         payload.style_profile,
         payload.target_length,
         payload.target_reader,
+        payload.quality_mode,
     )
 
     storage = LocalStorageTool()
@@ -143,9 +152,39 @@ def revise_article(payload: ReviseArticleRequest):
     return {"article": result}
 
 
+@router.post("/assess-article")
+def assess_article(payload: ArticleAssessmentRequest):
+    agent = NoteForgeAgent()
+    storage = LocalStorageTool()
+
+    style_profile = {}
+    if payload.use_style_memory:
+        style_profile = storage.read_style_profile().get("profile", {})
+
+    result = agent.assess_article(
+        title=payload.title,
+        content=payload.content,
+        platform=payload.platform,
+        target_reader=payload.target_reader,
+        style_profile=style_profile,
+        llm_model=payload.llm_model,
+    )
+
+    run_saved = storage.save_agent_run(
+        task_type="assess-article",
+        input_data=payload.model_dump(),
+        output_data=result,
+    )
+
+    result["assessment_run_id"] = run_saved["id"]
+    result["assessment_run_path"] = run_saved["path"]
+
+    return result
+
+
 @router.post("/full-workflow")
 def full_workflow(payload: WritingRequest):
-    agent = Read2PostAgent()
+    agent = NoteForgeAgent()
     storage = LocalStorageTool()
 
     workflow_input = payload.model_dump()
