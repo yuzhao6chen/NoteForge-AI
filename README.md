@@ -1,7 +1,7 @@
 # NoteForge-AI
 
 <p align="center">
-  <strong>把阅读笔记、摘录和粗糙想法，锻造成可编辑的公众号 / 博客草稿。</strong>
+  <strong>把粗糙想法写成公众号草稿，也把完整文章体检成可发布稿。</strong>
 </p>
 
 <p align="center">
@@ -21,9 +21,12 @@
 
 NoteForge-AI 是一个 Agent 驱动的写作工作台，面向经常阅读、记录、思考，并希望持续输出内容的人。
 
-它会把碎片化的读书笔记、摘录和个人想法，整理成一条可见的写作流程：解析素材、打磨想法、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、优化标题，最后导出 Markdown。
+它现在有两个核心入口：
 
-目标很简单：让 AI 处理繁重的第一稿，但保留你的思考、判断和个人表达。
+- **创作工作台**：把碎片化的读书笔记、摘录和个人想法，整理成一条可见的写作流程：解析素材、打磨想法、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、优化标题，最后导出 Markdown。
+- **文章体检**：把已经写好的公众号文章，按公众号发布标准和你的个人写作风格做体检，生成标题候选、发布判断、左右对照修改稿、事实风险提示和实用修改路径。
+
+目标很简单：让 AI 处理繁重的初稿和编辑检查，但保留你的思考、判断和个人表达。
 
 ## Features
 
@@ -33,11 +36,16 @@ NoteForge-AI 是一个 Agent 驱动的写作工作台，面向经常阅读、记
 - 对文章质量做审稿，并检查可能缺少来源支撑的事实表达。
 - 当评分或事实风险不达标时，自动进行一次克制修订。
 - 公众号深度打磨模式会额外进行一次编辑精修，优化开头、节奏、小标题和结尾收束。
+- 文章体检模式支持只粘贴正文，自动生成符合文章内容、个人风格和公众号场景的标题选项。
+- 文章体检会先返回左右对照：左边原文，右边按个人风格和公众号节奏改过的发布稿。
+- 体检结果包含核心诊断、实用修改路径、分段诊断、必须修改项、事实风险和发布门槛。
 - 从用户确认过的最终稿中学习个人写作风格。
 - 支持导出 Markdown，适合公众号、博客和个人知识库。
-- 使用真实 OpenAI-compatible LLM API，可选接入 Tavily 联网搜索。
+- 默认面向 DeepSeek V4 Flash，也支持 OpenAI-compatible LLM API、自选模型和 Tavily 联网搜索。
 
 ## Workflow
+
+### 创作工作台
 
 ```mermaid
 flowchart LR
@@ -57,6 +65,22 @@ flowchart LR
   M --> N[Markdown 导出]
 ```
 
+### 公众号文章体检
+
+```mermaid
+flowchart LR
+  A[完整文章正文] --> B[质量检查]
+  A --> C[事实风险检查]
+  A --> D[标题推荐]
+  B --> E[公众号发布稿改写]
+  C --> E
+  B --> F[综合编辑判断]
+  C --> F
+  D --> G[可选标题]
+  E --> H[左右对照]
+  F --> I[发布判断 / 修改路径]
+```
+
 ## Architecture
 
 ```mermaid
@@ -69,7 +93,8 @@ flowchart TB
   Skills --> S2[Idea Clarifier]
   Skills --> S3[Topic / Outline / Writer]
   Skills --> S4[Review / Fact Review / Revision]
-  Skills --> S5[Title Optimizer / Style Memory]
+  Skills --> S5[Title Recommender / Publish Rewriter]
+  Skills --> S6[Style Memory]
   Tools --> T1[LLM Client]
   Tools --> T2[Tavily Search]
   Tools --> T3[Local Markdown / JSON Storage]
@@ -81,6 +106,7 @@ flowchart TB
 - `backend/app/agents/skills/`
 - `backend/app/agents/tools/`
 - `frontend/src/pages/WritingStudio.tsx`
+- `frontend/src/pages/ArticleAssessment.tsx`
 
 ## Tech Stack
 
@@ -127,6 +153,19 @@ MIN_REVIEW_SCORE=88
 ```
 
 DeepSeek、Qwen 或其他兼容 OpenAI Chat Completions 的服务，可以通过修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 接入。前端也支持在生成时选择本次使用的模型，例如 `deepseek-v4-flash` 或 `deepseek-v4-pro`。
+
+如果 `OPENAI_BASE_URL=https://api.deepseek.com` 且没有填写 `LLM_MODEL_OPTIONS`，后端会自动向前端提供：
+
+- `deepseek-v4-flash`
+- `deepseek-v4-pro`
+
+如果你想自定义模型选项，可以使用逗号分隔的格式：
+
+```env
+LLM_MODEL_OPTIONS=deepseek-v4-flash|DeepSeek V4 Flash|速度更快，适合草稿生成,deepseek-v4-pro|DeepSeek V4 Pro|质量更高，适合文章体检和深度打磨
+```
+
+`LLM_REQUEST_TIMEOUT` 控制后端单次模型请求超时时间；文章体检会并行执行质量检查、事实风险和标题推荐，以减少等待时间。
 
 如果没有 Tavily key，请在生成前关闭 UI 里的联网搜索。
 
@@ -188,7 +227,7 @@ frontend/
   src/
     api/          REST 客户端和 TypeScript 类型
     components/   可复用 UI 面板
-    pages/        写作工作台页面
+    pages/        创作工作台和文章体检页面
 
 docs/
   figures/        架构图
@@ -200,6 +239,7 @@ docs/
 - 流式展示生成进度。
 - 文章版本历史和 diff 对比。
 - 更强的引用、来源校验和事实追踪。
+- 文章体检结果导出和修改稿版本对比。
 - 更多平台模板。
 - 长任务后台队列。
 - 更友好的 API Provider 配置引导。
