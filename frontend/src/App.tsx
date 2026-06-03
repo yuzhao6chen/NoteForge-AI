@@ -6,17 +6,15 @@ import ArticleAssessmentPage from './pages/ArticleAssessment'
 
 type AppPage = 'write' | 'assess'
 
-const pages: Array<{ id: AppPage; label: string; description: string; icon: LucideIcon }> = [
+const pages: Array<{ id: AppPage; label: string; icon: LucideIcon }> = [
   {
     id: 'write',
-    label: '创作工作台',
-    description: '想法和阅读笔记转公众号草稿',
+    label: '写草稿',
     icon: PenLine,
   },
   {
     id: 'assess',
-    label: '文章体检',
-    description: '完整公众号文章发布前评估',
+    label: '体检文章',
     icon: ClipboardCheck,
   },
 ]
@@ -31,7 +29,7 @@ export default function App() {
           <span className="brand-mark">NF</span>
           <div>
             <h1>NoteForge-AI</h1>
-            <p>公众号创作与发布前质量体检</p>
+            <p>从笔记到可发布草稿</p>
           </div>
         </div>
 
@@ -47,7 +45,6 @@ export default function App() {
                 <Icon size={17} />
                 <span>
                   <b>{page.label}</b>
-                  <small>{page.description}</small>
                 </span>
               </button>
             )

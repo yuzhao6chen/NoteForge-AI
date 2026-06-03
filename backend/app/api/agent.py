@@ -12,6 +12,7 @@ from app.schemas.agent import (
     ArticleAssessmentRequest,
 )
 from app.agents.noteforge_agent import NoteForgeAgent
+from app.agents.demo_data import build_demo_assessment, build_demo_workflow
 from app.agents.llm_client import get_llm_model_options
 from app.agents.tools.local_storage import LocalStorageTool
 
@@ -172,6 +173,62 @@ def assess_article(payload: ArticleAssessmentRequest):
 
     run_saved = storage.save_agent_run(
         task_type="assess-article",
+        input_data=payload.model_dump(),
+        output_data=result,
+    )
+
+    result["assessment_run_id"] = run_saved["id"]
+    result["assessment_run_path"] = run_saved["path"]
+
+    return result
+
+
+@router.post("/demo/full-workflow")
+def demo_full_workflow(payload: WritingRequest):
+    storage = LocalStorageTool()
+    result = build_demo_workflow(payload)
+
+    material_saved = storage.save_material(
+        title=payload.material_title,
+        content=payload.material_content,
+        source_type=payload.source_type,
+        source_name=payload.source_name,
+        tags="demo",
+        summary=result["material_analysis"].get("summary", ""),
+    )
+
+    article_title = result["titles"][0] if result.get("titles") else result["selected_topic"]
+    article_saved = storage.save_article(
+        title=article_title,
+        content=result["article"],
+        platform=payload.platform,
+        outline=result["outline"],
+        status="demo",
+    )
+
+    run_saved = storage.save_agent_run(
+        task_type="demo-full-workflow",
+        input_data=payload.model_dump(),
+        output_data=result,
+    )
+
+    result["material_id"] = material_saved["id"]
+    result["material_path"] = material_saved["path"]
+    result["article_id"] = article_saved["id"]
+    result["article_path"] = article_saved["path"]
+    result["agent_run_id"] = run_saved["id"]
+    result["agent_run_path"] = run_saved["path"]
+
+    return result
+
+
+@router.post("/demo/assess-article")
+def demo_assess_article(payload: ArticleAssessmentRequest):
+    storage = LocalStorageTool()
+    result = build_demo_assessment(payload)
+
+    run_saved = storage.save_agent_run(
+        task_type="demo-assess-article",
         input_data=payload.model_dump(),
         output_data=result,
     )

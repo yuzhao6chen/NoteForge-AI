@@ -7,9 +7,11 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import {
   assessArticle,
+  assessDemoArticle,
   ArticleAssessmentResult,
   CoreDiagnosis,
   EditorialChecklistItem,
@@ -32,6 +34,22 @@ const decisionLabels = {
   ready: '可以发布',
   revise: '修改后发布',
   hold: '暂不建议发布',
+}
+
+const demoAssessment = {
+  title: '你不是没有时间，而是注意力被切碎了',
+  targetReader: '公众号读者、大学生和自学者',
+  content: `很多人以为自己缺的是时间。
+
+但更准确地说，我们缺的是一段不会被打断的时间。
+
+你可能也有过这样的经验：打开电脑准备学习，先回一条消息；刚读了两页书，又忍不住看一眼短视频；晚上复盘时发现自己一整天都很忙，却说不出真正推进了什么。
+
+这不是你不努力，而是注意力被切得太碎。
+
+《深度工作》提醒我的一点是：真正有复利的成长，往往发生在连续专注的时间里。不是一天学了多少个知识点，而是有没有给一个问题留出完整的思考空间。
+
+对大学生和自学者来说，最值得训练的不是更强的打卡意志，而是更稳定的专注环境。比如每天留出 60 分钟不看手机，只处理一个任务。`,
 }
 
 export default function ArticleAssessmentPage() {
@@ -110,6 +128,38 @@ export default function ArticleAssessmentPage() {
     }
   }
 
+  async function handleRunDemo() {
+    setError('')
+    setStyleMemoryStatus('')
+    setLoading(true)
+    try {
+      setTitle(demoAssessment.title)
+      setSelectedTitle(demoAssessment.title)
+      setContent(demoAssessment.content)
+      setTargetReader(demoAssessment.targetReader)
+      setUseStyleMemory(false)
+
+      const data = await assessDemoArticle({
+        title: demoAssessment.title,
+        content: demoAssessment.content,
+        platform: 'wechat',
+        target_reader: demoAssessment.targetReader,
+        use_style_memory: false,
+        llm_model: undefined,
+      })
+      const recommendedTitle = pickRecommendedTitle(data.title_options || [], data.titles || [])
+      if (recommendedTitle) {
+        setSelectedTitle(recommendedTitle)
+        setTitle(recommendedTitle)
+      }
+      setResult(data)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Demo 体检失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleLearnStyle() {
     if (content.trim().length < 50) return
 
@@ -152,23 +202,37 @@ export default function ArticleAssessmentPage() {
             <h2>公众号文章体检</h2>
             <p>只粘贴文章主体也可以，系统会同时评估质量并生成标题候选。</p>
           </div>
-          <button className="primary" onClick={handleAssess} disabled={loading}>
-            {loading ? <Loader2 className="spin" size={18} /> : <ClipboardCheck size={18} />}
-            {loading ? '体检中...' : result ? '重新体检' : '开始体检'}
-          </button>
+          <div className="heading-actions">
+            <button className="secondary" onClick={handleRunDemo} disabled={loading}>
+              <Sparkles size={18} />
+              运行 Demo
+            </button>
+            <button className="primary" onClick={handleAssess} disabled={loading}>
+              {loading ? <Loader2 className="spin" size={18} /> : <ClipboardCheck size={18} />}
+              {loading ? '体检中...' : result ? '重新体检' : '开始体检'}
+            </button>
+          </div>
         </div>
 
-        <div className="assessment-grid">
+        <div className="assessment-grid simple">
           <div className="field-stack">
-            <label>文章标题（可选）</label>
-            <input
-              value={title}
-              onChange={e => {
-                setTitle(e.target.value)
-                setSelectedTitle(e.target.value)
-              }}
-              placeholder="不填也可以，体检后会生成标题候选"
-            />
+            <div className="primary-input-grid">
+              <div>
+                <label>文章标题（可选）</label>
+                <input
+                  value={title}
+                  onChange={e => {
+                    setTitle(e.target.value)
+                    setSelectedTitle(e.target.value)
+                  }}
+                  placeholder="不填也可以"
+                />
+              </div>
+              <div>
+                <label>目标读者</label>
+                <input value={targetReader} onChange={e => setTargetReader(e.target.value)} />
+              </div>
+            </div>
 
             <label>完整文章</label>
             <textarea
@@ -176,44 +240,41 @@ export default function ArticleAssessmentPage() {
               className="article-input auto-textarea"
               value={content}
               onChange={e => setContent(e.target.value)}
-              placeholder="把已经写好的公众号文章主体粘贴到这里。体检页会评估质量、指出风险，并生成可选标题。"
-              rows={14}
+              placeholder="把已经写好的文章粘贴到这里"
+              rows={12}
             />
-          </div>
 
-          <div className="settings-panel">
-            <div className="settings-title">
-              <ShieldCheck size={18} />
-              <h3>体检设置</h3>
-            </div>
+            <details className="advanced-settings settings-drawer">
+              <summary>
+                <ShieldCheck size={16} />
+                可选设置
+              </summary>
 
-            <label>目标读者</label>
-            <input value={targetReader} onChange={e => setTargetReader(e.target.value)} />
+              <label>模型</label>
+              <select value={llmModel} onChange={e => setLlmModel(e.target.value)}>
+                <option value="">使用 .env 默认{defaultModelLabel(modelOptions)}</option>
+                {modelOptions.map(option => (
+                  <option key={option.id} value={option.id} disabled={option.deprecated}>
+                    {option.label}{option.is_default ? '（默认）' : ''}{option.deprecated ? '（将弃用）' : ''}
+                  </option>
+                ))}
+              </select>
 
-            <label>模型</label>
-            <select value={llmModel} onChange={e => setLlmModel(e.target.value)}>
-              <option value="">使用 .env 默认{defaultModelLabel(modelOptions)}</option>
-              {modelOptions.map(option => (
-                <option key={option.id} value={option.id} disabled={option.deprecated}>
-                  {option.label}{option.is_default ? '（默认）' : ''}{option.deprecated ? '（将弃用）' : ''}
-                </option>
-              ))}
-            </select>
+              <div className="switch-grid single">
+                <label className="switch-row">
+                  <input type="checkbox" checked={useStyleMemory} onChange={e => setUseStyleMemory(e.target.checked)} />
+                  <span>
+                    <Brain size={16} />
+                    复用个人写作风格
+                  </span>
+                </label>
+              </div>
 
-            <div className="switch-grid single">
-              <label className="switch-row">
-                <input type="checkbox" checked={useStyleMemory} onChange={e => setUseStyleMemory(e.target.checked)} />
-                <span>
-                  <Brain size={16} />
-                  复用个人写作风格
-                </span>
-              </label>
-            </div>
-
-            <div className="memory-summary">
-              <b>{styleMemoryCount > 0 ? `已学习 ${styleMemoryCount} 篇` : '暂无风格记忆'}</b>
-              {styleMemorySummary && <p>{styleMemorySummary}</p>}
-            </div>
+              <div className="memory-summary">
+                <b>{styleMemoryCount > 0 ? `已学习 ${styleMemoryCount} 篇` : '暂无风格记忆'}</b>
+                {styleMemorySummary && <p>{styleMemorySummary}</p>}
+              </div>
+            </details>
           </div>
         </div>
       </section>

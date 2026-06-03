@@ -287,12 +287,20 @@ export function runFullWorkflow(payload: WritingRequest) {
   return postJson<WorkflowResult>('/api/agent/full-workflow', payload)
 }
 
+export function runDemoWorkflow(payload: WritingRequest) {
+  return postJson<WorkflowResult>('/api/agent/demo/full-workflow', payload)
+}
+
 export function getModelOptions() {
   return getJson<ModelOptionsResponse>('/api/agent/model-options')
 }
 
 export function assessArticle(payload: ArticleAssessmentRequest) {
   return postJson<ArticleAssessmentResult>('/api/agent/assess-article', payload)
+}
+
+export function assessDemoArticle(payload: ArticleAssessmentRequest) {
+  return postJson<ArticleAssessmentResult>('/api/agent/demo/assess-article', payload)
 }
 
 export function exportArticle(articleId: string) {

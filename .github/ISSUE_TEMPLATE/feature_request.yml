@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a useful improvement for NoteForge-AI.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What writing or publishing workflow problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the feature or behavior you want.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Writing workflow
+        - Article assessment
+        - Fact review
+        - Style memory
+        - Provider setup
+        - UI/UX
+        - Documentation
+        - Other
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Add sample input/output, screenshots, or related tools if helpful.

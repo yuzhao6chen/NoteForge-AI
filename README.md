@@ -1,14 +1,15 @@
 # NoteForge-AI
 
 <p align="center">
-  <strong>把粗糙想法写成公众号草稿，也把完整文章体检成可发布稿。</strong>
+  <strong>Turn rough reading notes into sourced, editable WeChat/blog drafts with an AI review gate.</strong>
 </p>
 
 <p align="center">
+  <a href="README.zh-CN.md">中文 README</a> ·
+  <a href="#why-it-exists">Why</a> ·
   <a href="#features">Features</a> ·
-  <a href="#workflow">Workflow</a> ·
-  <a href="#architecture">Architecture</a> ·
   <a href="#quick-start">Quick Start</a> ·
+  <a href="#demo-mode">Demo Mode</a> ·
   <a href="#roadmap">Roadmap</a>
 </p>
 
@@ -17,68 +18,54 @@
   <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB.svg" />
   <img alt="Backend" src="https://img.shields.io/badge/backend-FastAPI-009688.svg" />
   <img alt="Agent" src="https://img.shields.io/badge/agent-OpenAI--compatible-black.svg" />
+  <img alt="BYOK" src="https://img.shields.io/badge/BYOK-OpenAI%20compatible-blue.svg" />
 </p>
 
-NoteForge-AI 是一个 Agent 驱动的写作工作台，面向经常阅读、记录、思考，并希望持续输出内容的人。
+NoteForge-AI is a self-hosted writing workspace for people who read, take notes, and publish long-form ideas. It turns messy notes, excerpts, and half-formed thoughts into a visible writing pipeline: material parsing, idea clarification, optional web research, topic generation, outline drafting, article writing, quality review, fact-risk review, revision, title generation, and Markdown export.
 
-它现在有两个核心入口：
+The project is intentionally not a "one-click content farm". Its goal is to let AI handle the heavy first pass while keeping the author's thinking, judgment, and voice in the loop.
 
-- **创作工作台**：把碎片化的读书笔记、摘录和个人想法，整理成一条可见的写作流程：解析素材、打磨想法、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、优化标题，最后导出 Markdown。
-- **文章体检**：把已经写好的公众号文章，按公众号发布标准和你的个人写作风格做体检，生成标题候选、发布判断、左右对照修改稿、事实风险提示和实用修改路径。
+## Why It Exists
 
-目标很简单：让 AI 处理繁重的初稿和编辑检查，但保留你的思考、判断和个人表达。
+Most AI writing tools start from a prompt and end with a generic draft. NoteForge-AI starts from your own reading notes and keeps the editorial process visible:
+
+- It preserves the raw material and shows how the idea is refined.
+- It gives multiple topic angles before committing to a draft.
+- It reviews quality and fact risk before publishing.
+- It can learn from final drafts to build a lightweight personal style memory.
+- It exports Markdown instead of locking content into a platform.
 
 ## Features
 
-- 把阅读笔记、摘录、论文笔记或粗糙想法转成长文草稿。
-- 在正式写作前生成多个选题方向，方便选择角度。
-- 自动生成大纲、正文草稿和标题候选。
-- 对文章质量做审稿，并检查可能缺少来源支撑的事实表达。
-- 当评分或事实风险不达标时，自动进行一次克制修订。
-- 公众号深度打磨模式会额外进行一次编辑精修，优化开头、节奏、小标题和结尾收束。
-- 文章体检模式支持只粘贴正文，自动生成符合文章内容、个人风格和公众号场景的标题选项。
-- 文章体检会先返回左右对照：左边原文，右边按个人风格和公众号节奏改过的发布稿。
-- 体检结果包含核心诊断、实用修改路径、分段诊断、必须修改项、事实风险和发布门槛。
-- 从用户确认过的最终稿中学习个人写作风格。
-- 支持导出 Markdown，适合公众号、博客和个人知识库。
-- 默认面向 DeepSeek V4 Flash，也支持 OpenAI-compatible LLM API、自选模型和 Tavily 联网搜索。
+- Convert reading notes, book excerpts, paper notes, or rough ideas into long-form drafts.
+- Generate topic candidates, outlines, full drafts, and title options.
+- Run article quality review with score breakdowns and revision targets.
+- Check risky factual claims and suggest safer wording or citation needs.
+- Use a WeChat deep-polish mode for stronger openings, mobile reading rhythm, section headings, and endings.
+- Learn reusable writing style from final drafts.
+- Export drafts as Markdown for WeChat, blogs, newsletters, or personal knowledge bases.
+- Use any OpenAI-compatible Chat Completions API, including OpenAI, DeepSeek, Qwen, or compatible gateways.
+- Try the product flow locally with demo buttons even before adding an API key.
+- Keep the first screen simple: write notes first, tune model/search/style options only when needed.
 
-## Workflow
-
-### 创作工作台
+## Product Flow
 
 ```mermaid
 flowchart LR
-  A[阅读笔记] --> B[素材解析]
-  B --> C[想法打磨]
-  C --> D{是否联网搜索}
-  D -->|是| E[资料摘要]
-  D -->|否| F[生成选题]
+  A[Reading notes] --> B[Material parser]
+  B --> C[Idea brief]
+  C --> D{Web search?}
+  D -->|Yes| E[Research digest]
+  D -->|No| F[Topic candidates]
   E --> F
-  F --> G[生成大纲]
-  G --> H[撰写正文]
-  H --> I[质量检查]
-  I --> J[事实风险检查]
-  J --> K[自动修订]
-  K --> L[公众号精修]
-  L --> M[标题优化]
-  M --> N[Markdown 导出]
-```
-
-### 公众号文章体检
-
-```mermaid
-flowchart LR
-  A[完整文章正文] --> B[质量检查]
-  A --> C[事实风险检查]
-  A --> D[标题推荐]
-  B --> E[公众号发布稿改写]
-  C --> E
-  B --> F[综合编辑判断]
-  C --> F
-  D --> G[可选标题]
-  E --> H[左右对照]
-  F --> I[发布判断 / 修改路径]
+  F --> G[Outline]
+  G --> H[Draft]
+  H --> I[Quality review]
+  I --> J[Fact-risk review]
+  J --> K[Auto revision]
+  K --> L[WeChat polish]
+  L --> M[Title options]
+  M --> N[Markdown export]
 ```
 
 ## Architecture
@@ -93,14 +80,13 @@ flowchart TB
   Skills --> S2[Idea Clarifier]
   Skills --> S3[Topic / Outline / Writer]
   Skills --> S4[Review / Fact Review / Revision]
-  Skills --> S5[Title Recommender / Publish Rewriter]
-  Skills --> S6[Style Memory]
+  Skills --> S5[Title Optimizer / Style Memory]
   Tools --> T1[LLM Client]
   Tools --> T2[Tavily Search]
   Tools --> T3[Local Markdown / JSON Storage]
 ```
 
-核心文件：
+Core files:
 
 - `backend/app/agents/noteforge_agent.py`
 - `backend/app/agents/skills/`
@@ -110,26 +96,24 @@ flowchart TB
 
 ## Tech Stack
 
-| 层级 | 技术 |
+| Layer | Tech |
 | --- | --- |
-| 前端 | React, TypeScript, Vite, lucide-react |
-| 后端 | FastAPI, Pydantic, SQLAlchemy |
+| Frontend | React, TypeScript, Vite, lucide-react |
+| Backend | FastAPI, Pydantic, SQLAlchemy |
 | Agent | OpenAI-compatible Chat Completions API |
-| 搜索 | Tavily Search API |
-| 存储 | 本地 Markdown / JSON 文件 |
-| 部署 | Docker Compose |
+| Search | Tavily Search API |
+| Storage | Local Markdown / JSON files |
+| Deployment | Docker Compose |
 
 ## Quick Start
 
-### 1. 配置后端环境
-
-从示例文件创建 `backend/.env`：
+### 1. Configure the backend
 
 ```powershell
 copy backend\.env.example backend\.env
 ```
 
-编辑 `backend/.env`：
+Edit `backend/.env`:
 
 ```env
 APP_NAME=NoteForge-AI
@@ -143,33 +127,17 @@ OPENAI_MODEL=deepseek-v4-flash
 LLM_MODEL_OPTIONS=
 LLM_REQUEST_TIMEOUT=180
 
-# 如果不填 LLM_MODEL_OPTIONS，DeepSeek 配置下会自动显示：
-# deepseek-v4-flash 和 deepseek-v4-pro
-
 SEARCH_PROVIDER=tavily
 TAVILY_API_KEY=your_tavily_key
 
 MIN_REVIEW_SCORE=88
 ```
 
-DeepSeek、Qwen 或其他兼容 OpenAI Chat Completions 的服务，可以通过修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 接入。前端也支持在生成时选择本次使用的模型，例如 `deepseek-v4-flash` 或 `deepseek-v4-pro`。
+DeepSeek, Qwen, OpenAI, and other compatible providers can be used by changing `OPENAI_BASE_URL`, `OPENAI_MODEL`, and optionally `LLM_MODEL_OPTIONS`.
 
-如果 `OPENAI_BASE_URL=https://api.deepseek.com` 且没有填写 `LLM_MODEL_OPTIONS`，后端会自动向前端提供：
+Web search is off by default. Enable it only after adding a Tavily key.
 
-- `deepseek-v4-flash`
-- `deepseek-v4-pro`
-
-如果你想自定义模型选项，可以使用逗号分隔的格式：
-
-```env
-LLM_MODEL_OPTIONS=deepseek-v4-flash|DeepSeek V4 Flash|速度更快，适合草稿生成,deepseek-v4-pro|DeepSeek V4 Pro|质量更高，适合文章体检和深度打磨
-```
-
-`LLM_REQUEST_TIMEOUT` 控制后端单次模型请求超时时间；文章体检会并行执行质量检查、事实风险和标题推荐，以减少等待时间。
-
-如果没有 Tavily key，请在生成前关闭 UI 里的联网搜索。
-
-### 2. 启动后端
+### 2. Start the backend
 
 ```powershell
 cd backend
@@ -179,13 +147,13 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-后端接口文档：
+API docs:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-### 3. 启动前端
+### 3. Start the frontend
 
 ```powershell
 cd frontend
@@ -193,67 +161,105 @@ npm install
 npm.cmd run dev
 ```
 
-前端页面：
+Open:
 
 ```text
 http://localhost:5173
 ```
 
+For the shortest path, paste notes into `写草稿`, keep the optional settings collapsed, and click `生成草稿`. Use `体检文章` when you already have a complete draft and only want publishing feedback.
+
+## Demo Mode
+
+You can explore the end-to-end UX without any model key:
+
+1. Start both backend and frontend.
+2. Open `http://localhost:5173`.
+3. Click `运行 Demo` on the writing page or article assessment page.
+
+Demo mode uses local canned outputs and writes demo Markdown/JSON artifacts to the normal `backend/storage/` folder. Real generation still requires `OPENAI_API_KEY`.
+
 ## Docker
 
-使用 Docker Compose 前，请先创建 `backend/.env`。
+Create `backend/.env` first, then run:
 
 ```powershell
 docker compose up --build
 ```
 
-服务地址：
+Services:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:8000`
+
+## Examples
+
+Sample inputs and expected outputs live in `examples/`.
+
+- `examples/deep-work-note.md`
+- `examples/article-assessment-input.md`
+- `examples/demo-output.md`
+
+These examples are designed for README screenshots, issue reproduction, and quick manual QA.
 
 ## Project Structure
 
 ```text
 backend/
   app/
-    agents/       Agent 编排、Skills、Tools、Prompts
-    api/          FastAPI 路由
-    core/         配置和数据库初始化
-    models/       SQLAlchemy 模型
-    schemas/      Pydantic 请求 / 响应模型
+    agents/       Agent orchestration, skills, tools, prompts
+    api/          FastAPI routes
+    core/         Configuration and shared errors
+    models/       SQLAlchemy models
+    schemas/      Pydantic request / response models
 
 frontend/
   src/
-    api/          REST 客户端和 TypeScript 类型
-    components/   可复用 UI 面板
-    pages/        创作工作台和文章体检页面
+    api/          REST client and TypeScript types
+    components/   Reusable UI panels
+    pages/        Writing workspace and article assessment
 
-docs/
-  figures/        架构图
-  *.pdf / *.docx  架构文档
+examples/         Sample notes, articles, and demo output
+docs/             Architecture figures and generated docs
 ```
+
+## Quality Checks
+
+```powershell
+cd frontend
+npm.cmd run build
+```
+
+```powershell
+python -m compileall backend\app
+```
+
+The GitHub Actions workflow runs both checks on pull requests and pushes.
 
 ## Roadmap
 
-- 流式展示生成进度。
-- 文章版本历史和 diff 对比。
-- 更强的引用、来源校验和事实追踪。
-- 文章体检结果导出和修改稿版本对比。
-- 更多平台模板。
-- 长任务后台队列。
-- 更友好的 API Provider 配置引导。
-- 在线 Demo 部署。
+- Online hosted demo with preloaded examples.
+- Streaming progress updates during long model runs.
+- Article version history and diff view.
+- Stronger citation tracking and source verification.
+- More publishing templates beyond WeChat and blogs.
+- Background job queue for long-running workflows.
+- Better provider setup wizard for OpenAI-compatible APIs.
 
 ## Contributing
 
-这个项目还在持续进化中，欢迎提交 Issue、功能建议、Prompt 优化、UI 改进和文档补充。
+Issues, feature ideas, prompt improvements, UI polish, provider compatibility fixes, and documentation examples are welcome. See `CONTRIBUTING.md`.
 
-如果 NoteForge-AI 帮你把阅读变成了写作，欢迎给它一个 Star，让更多创作者看到它。
+Good first contributions:
+
+- Add a new example input and expected output.
+- Improve a prompt in `backend/app/prompts/`.
+- Add a provider setup note for a compatible LLM gateway.
+- Improve mobile UI polish in the writing workspace.
 
 ## Security
 
-NoteForge-AI 是 BYOK 项目：你需要使用自己的 LLM 和搜索 API key。请把密钥保存在 `backend/.env`，不要提交到 GitHub。
+NoteForge-AI is BYOK. Keep your LLM and search keys in `backend/.env`; never commit them to GitHub. Runtime output is stored locally under `backend/storage/`.
 
 ## License
 

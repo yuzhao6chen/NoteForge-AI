@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a reproducible problem in NoteForge-AI.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: List the exact steps, input text, and settings.
+      placeholder: |
+        1. Start backend with ...
+        2. Open ...
+        3. Click ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Environment
+      placeholder: Windows 11, Python 3.11, Node 22, Chrome 125
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      render: text

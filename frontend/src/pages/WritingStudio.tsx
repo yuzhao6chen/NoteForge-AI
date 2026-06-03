@@ -15,6 +15,7 @@ import {
   getModelOptions,
   getStyleMemory,
   ModelOption,
+  runDemoWorkflow,
   runFullWorkflow,
   StyleMemory,
   updateStyleMemoryFromFinal,
@@ -37,6 +38,14 @@ const resultTabs: Array<{ id: ResultView; label: string }> = [
   { id: 'research', label: '来源' },
 ]
 
+const demoInput = {
+  materialTitle: '读《深度工作》的思考',
+  sourceName: '深度工作',
+  content: '今天读《深度工作》，我发现现在很多人不是没有时间，而是注意力被短视频和社交软件切碎了。真正重要的不是每天学多久，而是有没有连续专注的时间。我想写给大学生和自学者，提醒他们别把努力变成碎片化打卡。',
+  targetReader: '大学生和自学者',
+  style: '真诚、自然、有个人感',
+}
+
 export default function WritingStudio() {
   const [materialTitle, setMaterialTitle] = useState('读《深度工作》的思考')
   const [sourceName, setSourceName] = useState('深度工作')
@@ -48,7 +57,7 @@ export default function WritingStudio() {
   const [llmModel, setLlmModel] = useState('')
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
   const [qualityMode, setQualityMode] = useState('balanced')
-  const [enableWebSearch, setEnableWebSearch] = useState(true)
+  const [enableWebSearch, setEnableWebSearch] = useState(false)
   const [autoRevise, setAutoRevise] = useState(true)
   const [useStyleMemory, setUseStyleMemory] = useState(true)
   const [styleMemory, setStyleMemory] = useState<StyleMemory | null>(null)
@@ -136,6 +145,53 @@ export default function WritingStudio() {
     }
   }
 
+  async function handleRunDemo() {
+    setError('')
+    setExportPath('')
+    setStyleMemoryStatus('')
+    setLoading(true)
+
+    const payload = {
+      material_title: demoInput.materialTitle,
+      material_content: demoInput.content,
+      source_type: 'book',
+      source_name: demoInput.sourceName,
+      platform,
+      style: demoInput.style,
+      target_length: targetLength,
+      target_reader: demoInput.targetReader,
+      enable_web_search: true,
+      selected_topic: undefined,
+      auto_revise: true,
+      style_reference: '',
+      use_style_memory: false,
+      quality_mode: qualityMode,
+    }
+
+    try {
+      setMaterialTitle(demoInput.materialTitle)
+      setSourceName(demoInput.sourceName)
+      setContent(demoInput.content)
+      setStyle(demoInput.style)
+      setTargetReader(demoInput.targetReader)
+      setEnableWebSearch(true)
+      setAutoRevise(true)
+      setUseStyleMemory(false)
+      setSelectedTopic('')
+      setStyleReference('')
+
+      const data = await runDemoWorkflow(payload)
+      setResult(data)
+      setEditedArticle(data.article)
+      setSelectedTopic(data.selected_topic)
+      setActiveView('draft')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Demo 运行失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleExport() {
     if (!result?.article_id) return
     try {
@@ -198,38 +254,25 @@ export default function WritingStudio() {
               <span className="eyebrow">Input</span>
               <h2>写作素材</h2>
             </div>
-            <button className="primary" onClick={handleGenerate} disabled={loading}>
-              <Sparkles size={18} />
-              {loading ? '生成中...' : result ? '重新生成' : '生成草稿'}
-            </button>
+            <div className="heading-actions">
+              <button className="secondary" onClick={handleRunDemo} disabled={loading}>
+                <Sparkles size={18} />
+                运行 Demo
+              </button>
+              <button className="primary" onClick={handleGenerate} disabled={loading}>
+                <Sparkles size={18} />
+                {loading ? '生成中...' : result ? '重新生成' : '生成草稿'}
+              </button>
+            </div>
           </div>
 
-          <div className="compose-grid">
+          <div className="compose-grid simple">
             <div className="field-stack">
-              <label>素材标题</label>
-              <input value={materialTitle} onChange={e => setMaterialTitle(e.target.value)} />
-
-              <label>来源名称</label>
-              <input value={sourceName} onChange={e => setSourceName(e.target.value)} />
-
-              <label>阅读笔记 / 想法</label>
-              <textarea
-                ref={ideaInputRef}
-                className="idea-input auto-textarea"
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder="可以写得很粗糙，先把真实想法放进来"
-                rows={8}
-              />
-            </div>
-
-            <div className="settings-panel">
-              <div className="settings-title">
-                <SlidersHorizontal size={18} />
-                <h3>生成设置</h3>
-              </div>
-
-              <div className="two-col">
+              <div className="primary-input-grid">
+                <div>
+                  <label>素材标题</label>
+                  <input value={materialTitle} onChange={e => setMaterialTitle(e.target.value)} />
+                </div>
                 <div>
                   <label>平台</label>
                   <select value={platform} onChange={e => setPlatform(e.target.value)}>
@@ -237,24 +280,57 @@ export default function WritingStudio() {
                     <option value="blog">博客</option>
                   </select>
                 </div>
+              </div>
+
+              <label>阅读笔记 / 想法</label>
+              <textarea
+                ref={ideaInputRef}
+                className="idea-input auto-textarea"
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                placeholder="把读书笔记、摘录或粗糙想法放在这里"
+                rows={10}
+              />
+
+              <div className="quick-setting-grid">
+                <div>
+                  <label>目标读者</label>
+                  <input value={targetReader} onChange={e => setTargetReader(e.target.value)} />
+                </div>
                 <div>
                   <label>目标字数</label>
                   <input type="number" value={targetLength} onChange={e => setTargetLength(Number(e.target.value))} />
                 </div>
+                <div>
+                  <label>写作风格</label>
+                  <input value={style} onChange={e => setStyle(e.target.value)} />
+                </div>
               </div>
 
-              <div className="two-col">
-                <div>
-                  <label>模型</label>
-                  <select value={llmModel} onChange={e => setLlmModel(e.target.value)}>
-                    <option value="">使用 .env 默认{defaultModelLabel(modelOptions)}</option>
-                    {modelOptions.map(option => (
-                      <option key={option.id} value={option.id} disabled={option.deprecated}>
-                        {option.label}{option.is_default ? '（默认）' : ''}{option.deprecated ? '（将弃用）' : ''}
-                      </option>
-                    ))}
-                  </select>
+              <details className="advanced-settings settings-drawer">
+                <summary>
+                  <SlidersHorizontal size={16} />
+                  可选设置
+                </summary>
+
+                <div className="drawer-grid">
+                  <div>
+                    <label>来源名称</label>
+                    <input value={sourceName} onChange={e => setSourceName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label>模型</label>
+                    <select value={llmModel} onChange={e => setLlmModel(e.target.value)}>
+                      <option value="">使用 .env 默认{defaultModelLabel(modelOptions)}</option>
+                      {modelOptions.map(option => (
+                        <option key={option.id} value={option.id} disabled={option.deprecated}>
+                          {option.label}{option.is_default ? '（默认）' : ''}{option.deprecated ? '（将弃用）' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
                 <div>
                   <label>质量模式</label>
                   <select value={qualityMode} onChange={e => setQualityMode(e.target.value)}>
@@ -262,45 +338,36 @@ export default function WritingStudio() {
                     <option value="deep">深度打磨</option>
                   </select>
                 </div>
-              </div>
 
-              <label>目标读者</label>
-              <input value={targetReader} onChange={e => setTargetReader(e.target.value)} />
+                <div className="switch-grid">
+                  <label className="switch-row">
+                    <input type="checkbox" checked={enableWebSearch} onChange={e => setEnableWebSearch(e.target.checked)} />
+                    <span>
+                      <Search size={16} />
+                      联网搜索
+                    </span>
+                  </label>
+                  <label className="switch-row">
+                    <input type="checkbox" checked={autoRevise} onChange={e => setAutoRevise(e.target.checked)} />
+                    <span>
+                      <ShieldCheck size={16} />
+                      自动修订
+                    </span>
+                  </label>
+                  <label className="switch-row">
+                    <input type="checkbox" checked={useStyleMemory} onChange={e => setUseStyleMemory(e.target.checked)} />
+                    <span>
+                      <Brain size={16} />
+                      风格记忆
+                    </span>
+                  </label>
+                </div>
 
-              <label>写作风格</label>
-              <input value={style} onChange={e => setStyle(e.target.value)} />
+                <div className="memory-summary">
+                  <b>{styleMemoryCount > 0 ? `已学习 ${styleMemoryCount} 篇` : '暂无风格记忆'}</b>
+                  {styleMemorySummary && <p>{styleMemorySummary}</p>}
+                </div>
 
-              <div className="switch-grid">
-                <label className="switch-row">
-                  <input type="checkbox" checked={enableWebSearch} onChange={e => setEnableWebSearch(e.target.checked)} />
-                  <span>
-                    <Search size={16} />
-                    联网搜索
-                  </span>
-                </label>
-                <label className="switch-row">
-                  <input type="checkbox" checked={autoRevise} onChange={e => setAutoRevise(e.target.checked)} />
-                  <span>
-                    <ShieldCheck size={16} />
-                    自动修订
-                  </span>
-                </label>
-                <label className="switch-row">
-                  <input type="checkbox" checked={useStyleMemory} onChange={e => setUseStyleMemory(e.target.checked)} />
-                  <span>
-                    <Brain size={16} />
-                    风格记忆
-                  </span>
-                </label>
-              </div>
-
-              <div className="memory-summary">
-                <b>{styleMemoryCount > 0 ? `已学习 ${styleMemoryCount} 篇` : '暂无风格记忆'}</b>
-                {styleMemorySummary && <p>{styleMemorySummary}</p>}
-              </div>
-
-              <details className="advanced-settings">
-                <summary>高级设置</summary>
                 <label>参考文风</label>
                 <textarea
                   value={styleReference}
@@ -397,11 +464,6 @@ export default function WritingStudio() {
                 {activeView === 'draft' && (
                   <>
                     <section className="content-section">
-                      <h2>标题候选</h2>
-                      <ol className="title-list">{result.titles.map(title => <li key={title}>{title}</li>)}</ol>
-                    </section>
-
-                    <section className="content-section">
                       <div className="section-heading compact-heading">
                         <div>
                           <h2>文章草稿</h2>
@@ -451,6 +513,11 @@ export default function WritingStudio() {
                         }}
                       />
                     </section>
+
+                    <details className="content-section subtle-details">
+                      <summary>标题候选</summary>
+                      <ol className="title-list">{result.titles.map(title => <li key={title}>{title}</li>)}</ol>
+                    </details>
                   </>
                 )}
 
