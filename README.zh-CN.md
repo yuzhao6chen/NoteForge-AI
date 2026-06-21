@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="README.md">English README</a> ·
+  <a href="#界面预览">界面预览</a> ·
   <a href="#为什么做它">为什么做它</a> ·
   <a href="#功能亮点">功能亮点</a> ·
   <a href="#快速开始">快速开始</a> ·
@@ -15,9 +16,25 @@
 
 NoteForge-AI 是一个自托管 AI 写作工作台，面向经常阅读、记录、思考，并希望持续输出长文内容的人。
 
+## 界面预览
+
+<p align="center">
+  <img alt="NoteForge-AI 写作工作台" src="frontend/public/noteforge-writing-studio.png" />
+</p>
+
 它会把碎片化的读书笔记、摘录和个人想法整理成一条可见流程：素材解析、想法打磨、按需联网搜索、生成选题和大纲、撰写正文、质量检查、事实风险检查、自动修订、标题优化，最后导出 Markdown。
 
 目标不是制造一键洗稿机器，而是让 AI 处理繁重的第一稿，同时保留你的思考、判断和个人表达。
+
+## 快速速览
+
+| 可以体验什么 | 为什么有价值 |
+| --- | --- |
+| `写草稿` 工作台 | 粘贴粗糙阅读笔记，得到选题、大纲、正文、审稿信号和 Markdown 导出。 |
+| `体检文章` 工作台 | 粘贴已写好的文章，得到可发布 / 需修改 / 暂缓发布判断、标题候选、修改建议和事实风险审查。 |
+| 本地 Demo 接口 | 没有 API key 时，也能先体验完整产品流。 |
+| OpenAI-compatible 配置 | 可以接 OpenAI、DeepSeek、Qwen 或兼容网关，不需要改应用代码。 |
+| 风格记忆 | 从确认过的最终稿里沉淀本地写作画像，影响后续生成和体检建议。 |
 
 ## 为什么做它
 
@@ -35,6 +52,9 @@ NoteForge-AI 是一个自托管 AI 写作工作台，面向经常阅读、记录
 - 自动生成选题候选、大纲、正文草稿和标题候选。
 - 对文章质量做审稿，并给出分项评分和修订目标。
 - 检查可能缺少来源支撑的事实表达，提示引用、弱化或删除。
+- 文章体检页支持“只给建议 / 轻度润色 / 发布稿改写”三种优化模式。
+- 基于本地写作画像生成画像驱动建议，说明哪些风格信号影响了修改优先级。
+- 文章优化流程接入 LangGraph StateGraph 编排，便于后续扩展人工确认、RAG 和版本 diff 节点。
 - 公众号深度打磨模式会额外优化开头、节奏、小标题和结尾。
 - 从用户确认过的最终稿中学习个人写作风格。
 - 支持导出 Markdown，适合公众号、博客、Newsletter 和个人知识库。
@@ -56,11 +76,24 @@ flowchart LR
   G --> H[撰写正文]
   H --> I[质量检查]
   I --> J[事实风险检查]
-  J --> K[自动修订]
-  K --> L[公众号精修]
-  L --> M[标题优化]
-  M --> N[Markdown 导出]
+  J --> K[画像驱动优化建议]
+  K --> L{优化模式}
+  L -->|只建议| M[发布建议]
+  L -->|轻润色 / 发布稿| N[文章优化稿]
+  N --> O[标题优化]
+  O --> P[Markdown 导出]
 ```
+
+## 先看哪里
+
+| 关注点 | 文件 |
+| --- | --- |
+| 主 Agent 流程 | `backend/app/agents/noteforge_agent.py`, `backend/app/agents/graphs/article_optimization_graph.py` |
+| Prompt 行为 | `backend/app/prompts/` |
+| Demo 数据 | `backend/app/agents/demo_data.py` |
+| API 契约 | `backend/app/schemas/agent.py`, `frontend/src/api/agent.ts` |
+| 产品前端 | `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/style.css` |
+| 示例素材 | `examples/` |
 
 ## 快速开始
 

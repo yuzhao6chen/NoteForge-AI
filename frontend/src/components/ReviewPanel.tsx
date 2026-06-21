@@ -4,6 +4,8 @@ export default function ReviewPanel({ review }: { review: Review }) {
   const risk = review.originality_risk?.comment || review.risk
   const breakdown = review.score_breakdown || {}
   const wechat = review.wechat_editorial || {}
+  const problems = review.problems || []
+  const suggestions = review.suggestions || []
 
   return (
     <div className="card">
@@ -79,12 +81,22 @@ export default function ReviewPanel({ review }: { review: Review }) {
         </>
       )}
 
-      <h3>问题</h3>
-      <ul>{(review.problems || []).map((item, idx) => <li key={idx}>{item}</li>)}</ul>
-      <h3>建议</h3>
-      <ul>{(review.suggestions || []).map((item, idx) => <li key={idx}>{item}</li>)}</ul>
+      <ListBlock title="问题" items={problems} />
+      <ListBlock title="建议" items={suggestions} />
+      {!problems.length && !suggestions.length && <p className="muted">暂无额外问题或建议。</p>}
       {risk && <p><b>风险：</b>{risk}</p>}
     </div>
+  )
+}
+
+function ListBlock({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null
+
+  return (
+    <>
+      <h3>{title}</h3>
+      <ul>{items.map((item, idx) => <li key={idx}>{item}</li>)}</ul>
+    </>
   )
 }
 

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from pydantic import Field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 
 class WritingRequest(BaseModel):
@@ -28,6 +28,7 @@ class ArticleAssessmentRequest(BaseModel):
     target_reader: str = "公众号读者"
     use_style_memory: bool = True
     llm_model: Optional[str] = Field(default=None, max_length=100)
+    optimization_mode: Literal["advice_only", "light_polish", "publish_ready"] = "publish_ready"
 
 
 class ParseMaterialRequest(BaseModel):

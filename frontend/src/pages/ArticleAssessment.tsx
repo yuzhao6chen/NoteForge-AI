@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   Brain,
+  Check,
   CheckCircle2,
   ClipboardCheck,
+  Copy,
+  FileText,
   Loader2,
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  Wand2,
+  Workflow,
 } from 'lucide-react'
+import type { ApiStatus } from '../App'
 import {
   assessArticle,
   assessDemoArticle,
@@ -18,6 +24,9 @@ import {
   getModelOptions,
   getStyleMemory,
   ModelOption,
+  OptimizationMode,
+  OptimizationSummary,
+  PersonaSuggestion,
   PriorityFix,
   PracticalRevisionStep,
   RewriteSample,
@@ -29,12 +38,19 @@ import {
 import FactReviewPanel from '../components/FactReviewPanel'
 import ReviewPanel from '../components/ReviewPanel'
 import StyleProfilePanel from '../components/StyleProfilePanel'
+import { defaultModelLabel, resizeTextarea } from '../utils/form'
 
 const decisionLabels = {
   ready: '可以发布',
   revise: '修改后发布',
   hold: '暂不建议发布',
 }
+
+const optimizationModes: Array<{ value: OptimizationMode; label: string; note: string }> = [
+  { value: 'publish_ready', label: '发布稿', note: '重排开头和节奏' },
+  { value: 'light_polish', label: '轻润色', note: '保留结构，收紧表达' },
+  { value: 'advice_only', label: '只建议', note: '跳过全文改写' },
+]
 
 const demoAssessment = {
   title: '你不是没有时间，而是注意力被切碎了',
@@ -52,12 +68,17 @@ const demoAssessment = {
 对大学生和自学者来说，最值得训练的不是更强的打卡意志，而是更稳定的专注环境。比如每天留出 60 分钟不看手机，只处理一个任务。`,
 }
 
-export default function ArticleAssessmentPage() {
+interface ArticleAssessmentPageProps {
+  apiStatus: ApiStatus
+}
+
+export default function ArticleAssessmentPage({ apiStatus }: ArticleAssessmentPageProps) {
   const [title, setTitle] = useState('')
   const [selectedTitle, setSelectedTitle] = useState('')
   const [content, setContent] = useState('')
   const [targetReader, setTargetReader] = useState('公众号读者')
   const [llmModel, setLlmModel] = useState('')
+  const [optimizationMode, setOptimizationMode] = useState<OptimizationMode>('publish_ready')
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
   const [useStyleMemory, setUseStyleMemory] = useState(true)
   const [styleMemory, setStyleMemory] = useState<StyleMemory | null>(null)
@@ -99,6 +120,10 @@ export default function ArticleAssessmentPage() {
   }, [content])
 
   async function handleAssess() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再体检。')
+      return
+    }
     setError('')
     setStyleMemoryStatus('')
     setLoading(true)
@@ -114,6 +139,7 @@ export default function ArticleAssessmentPage() {
         target_reader: targetReader,
         use_style_memory: useStyleMemory,
         llm_model: llmModel || undefined,
+        optimization_mode: optimizationMode,
       })
       const recommendedTitle = pickRecommendedTitle(data.title_options || [], data.titles || [])
       if (recommendedTitle) {
@@ -128,7 +154,20 @@ export default function ArticleAssessmentPage() {
     }
   }
 
+  function handleUseSample() {
+    setTitle(demoAssessment.title)
+    setSelectedTitle(demoAssessment.title)
+    setContent(demoAssessment.content)
+    setTargetReader(demoAssessment.targetReader)
+    setStyleMemoryStatus('')
+    setError('')
+  }
+
   async function handleRunDemo() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再运行 Demo。')
+      return
+    }
     setError('')
     setStyleMemoryStatus('')
     setLoading(true)
@@ -137,15 +176,16 @@ export default function ArticleAssessmentPage() {
       setSelectedTitle(demoAssessment.title)
       setContent(demoAssessment.content)
       setTargetReader(demoAssessment.targetReader)
-      setUseStyleMemory(false)
+      setUseStyleMemory(true)
 
       const data = await assessDemoArticle({
         title: demoAssessment.title,
         content: demoAssessment.content,
         platform: 'wechat',
         target_reader: demoAssessment.targetReader,
-        use_style_memory: false,
+        use_style_memory: true,
         llm_model: undefined,
+        optimization_mode: optimizationMode,
       })
       const recommendedTitle = pickRecommendedTitle(data.title_options || [], data.titles || [])
       if (recommendedTitle) {
@@ -161,6 +201,10 @@ export default function ArticleAssessmentPage() {
   }
 
   async function handleLearnStyle() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再学习风格。')
+      return
+    }
     if (content.trim().length < 50) return
 
     setError('')
@@ -184,15 +228,18 @@ export default function ArticleAssessmentPage() {
     }
   }
 
+  const apiReady = apiStatus === 'online'
+  const backendActionTitle = apiReady ? undefined : '请先启动后端服务'
   const styleMemoryCount = styleMemory?.sample_count || 0
   const styleMemorySummary = styleMemory?.profile?.voice_summary
   const gate = result?.publish_gate
   const assessment = result?.assessment
   const styleAlignment = assessment?.style_alignment
   const factRisk = result?.fact_review?.overall_risk || 'low'
+  const contentLength = content.trim().length
 
   return (
-    <main className="studio-shell">
+    <main className={loading ? 'studio-shell assessment-shell is-loading' : 'studio-shell assessment-shell'}>
       {error && <div className="error">{error}</div>}
 
       <section className="compose-section">
@@ -203,11 +250,15 @@ export default function ArticleAssessmentPage() {
             <p>只粘贴文章主体也可以，系统会同时评估质量并生成标题候选。</p>
           </div>
           <div className="heading-actions">
-            <button className="secondary" onClick={handleRunDemo} disabled={loading}>
+            <button className="secondary" onClick={handleUseSample} disabled={loading}>
+              <FileText size={18} />
+              填入示例
+            </button>
+            <button className="secondary" onClick={handleRunDemo} disabled={loading || !apiReady} title={backendActionTitle}>
               <Sparkles size={18} />
               运行 Demo
             </button>
-            <button className="primary" onClick={handleAssess} disabled={loading}>
+            <button className="primary" onClick={handleAssess} disabled={loading || !apiReady} title={backendActionTitle}>
               {loading ? <Loader2 className="spin" size={18} /> : <ClipboardCheck size={18} />}
               {loading ? '体检中...' : result ? '重新体检' : '开始体检'}
             </button>
@@ -243,6 +294,10 @@ export default function ArticleAssessmentPage() {
               placeholder="把已经写好的文章粘贴到这里"
               rows={12}
             />
+            <div className="input-meta">
+              <span>{contentLength} 字符</span>
+              <span>建议 800 字以上更稳定</span>
+            </div>
 
             <details className="advanced-settings settings-drawer">
               <summary>
@@ -259,6 +314,24 @@ export default function ArticleAssessmentPage() {
                   </option>
                 ))}
               </select>
+
+              <label>优化模式</label>
+              <div className="segmented-control optimization-mode-control" role="group" aria-label="优化模式">
+                {optimizationModes.map(mode => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    className={optimizationMode === mode.value ? 'active' : ''}
+                    onClick={() => setOptimizationMode(mode.value)}
+                  >
+                    <Wand2 size={15} />
+                    <span>
+                      <b>{mode.label}</b>
+                      <small>{mode.note}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
 
               <div className="switch-grid single">
                 <label className="switch-row">
@@ -292,6 +365,8 @@ export default function ArticleAssessmentPage() {
               <AssessmentMetric label="总分" value={String(result.review?.score ?? '-')} />
               <AssessmentMetric label="事实风险" value={factRisk} />
               <AssessmentMetric label="风格匹配" value={String(styleAlignment?.score ?? '-')} />
+              <AssessmentMetric label="优化模式" value={result.optimization?.mode_label || modeLabel(result.optimization_mode)} />
+              <AssessmentMetric label="画像建议" value={String(result.persona_suggestions?.length ?? 0)} />
               <AssessmentMetric label="阈值" value={String(gate.score_threshold)} />
             </div>
 
@@ -301,6 +376,8 @@ export default function ArticleAssessmentPage() {
 
           <div className="assessment-layout">
             <section className="output-column">
+              <OptimizationOverview optimization={result.optimization} />
+              <PersonaSuggestionPanel suggestions={result.persona_suggestions || []} styleMemoryUsed={!!result.style_memory_used} />
               <ArticleCompare
                 original={result.original_article || content}
                 revised={result.revised_article || ''}
@@ -321,6 +398,7 @@ export default function ArticleAssessmentPage() {
 
             <aside className="assist-column">
               <StyleProfilePanel profile={result.style_profile || {}} />
+              <WorkflowTracePanel engine={result.workflow_engine} trace={result.workflow_trace || []} />
 
               <section className="content-section">
                 <div className="section-heading compact-heading">
@@ -331,7 +409,8 @@ export default function ArticleAssessmentPage() {
                   <button
                     className="secondary"
                     onClick={handleLearnStyle}
-                    disabled={styleMemoryLoading || content.trim().length < 50}
+                    disabled={styleMemoryLoading || content.trim().length < 50 || !apiReady}
+                    title={backendActionTitle}
                   >
                     <Brain size={16} />
                     {styleMemoryLoading ? '学习中...' : '学习这篇'}
@@ -402,8 +481,168 @@ function GateList({ title, items, tone }: { title: string; items: string[]; tone
   )
 }
 
+function OptimizationOverview({ optimization }: { optimization?: OptimizationSummary }) {
+  if (!optimization) return null
+
+  return (
+    <section className="content-section optimization-overview">
+      <div className="section-heading compact-heading">
+        <div>
+          <h2>文章优化</h2>
+          <p className="muted">{optimization.summary || optimization.next_action}</p>
+        </div>
+        <span className="mode-pill">
+          <Wand2 size={15} />
+          {optimization.mode_label}
+        </span>
+      </div>
+
+      <div className="optimization-grid">
+        <OptimizationStat label="原始评分" value={String(optimization.score_before ?? '-')} />
+        <OptimizationStat label="目标评分" value={`${optimization.target_score}+`} />
+        <OptimizationStat label="画像信号" value={String(optimization.persona_signal_count)} />
+      </div>
+
+      {!!optimization.focus_areas?.length && <TagLine label="重点" items={optimization.focus_areas} />}
+      {optimization.next_action && <p className="next-action"><b>下一步：</b>{optimization.next_action}</p>}
+      {optimization.expected_score_lift && <p className="muted">{optimization.expected_score_lift}</p>}
+
+      {!!optimization.quick_wins?.length && (
+        <>
+          <h3>快速提升点</h3>
+          <div className="quick-win-list">
+            {optimization.quick_wins.map(item => (
+              <span key={item}>
+                <CheckCircle2 size={15} />
+                {item}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!!optimization.risk_notes?.length && (
+        <div className="risk-note-list">
+          {optimization.risk_notes.map(item => (
+            <p key={item}><ShieldCheck size={15} />{item}</p>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function OptimizationStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="optimization-stat">
+      <small>{label}</small>
+      <b>{value}</b>
+    </div>
+  )
+}
+
+function PersonaSuggestionPanel({
+  suggestions,
+  styleMemoryUsed,
+}: {
+  suggestions: PersonaSuggestion[]
+  styleMemoryUsed: boolean
+}) {
+  if (!styleMemoryUsed) {
+    return (
+      <section className="content-section persona-panel empty-persona">
+        <h2>画像驱动建议</h2>
+        <p className="muted">本次未启用本地写作画像。</p>
+      </section>
+    )
+  }
+
+  if (!suggestions.length) {
+    return (
+      <section className="content-section persona-panel empty-persona">
+        <h2>画像驱动建议</h2>
+        <p className="muted">当前文章和本地画像冲突不明显，优先处理结构、来源和节奏。</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="content-section persona-panel">
+      <div className="section-heading compact-heading">
+        <div>
+          <h2>画像驱动建议</h2>
+          <p className="muted">本地画像会影响建议优先级、标题候选和改写语气。</p>
+        </div>
+        <span className="mode-pill">
+          <Brain size={15} />
+          {suggestions.length} 条
+        </span>
+      </div>
+      <div className="persona-suggestion-list">
+        {suggestions.map((item, idx) => (
+          <div className={`persona-suggestion ${item.priority}`} key={`${item.profile_signal}-${idx}`}>
+            <div className="row-between">
+              <b>{item.profile_signal}</b>
+              <span>{priorityLabel(item.priority)}</span>
+            </div>
+            {item.article_gap && <p><b>偏差：</b>{item.article_gap}</p>}
+            {item.suggestion && <p><b>建议：</b>{item.suggestion}</p>}
+            {item.example && <pre>{item.example}</pre>}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function WorkflowTracePanel({
+  engine,
+  trace,
+}: {
+  engine?: string
+  trace: Array<{ step: string; status: string; note: string }>
+}) {
+  if (!trace.length && !engine) return null
+
+  return (
+    <section className="content-section workflow-trace-panel">
+      <div className="section-heading compact-heading">
+        <div>
+          <h2>优化工作流</h2>
+          <p className="muted">{engineLabel(engine)}</p>
+        </div>
+        <Workflow size={18} />
+      </div>
+      <div className="workflow-node-list">
+        {trace.map(item => (
+          <div className="workflow-node" key={item.step}>
+            <span className={`dot ${item.status === 'done' ? 'done' : 'running'}`} />
+            <div>
+              <b>{workflowStepLabel(item.step)}</b>
+              <p>{item.note}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function ArticleCompare({ original, revised }: { original: string; revised: string }) {
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+
   if (!revised.trim()) return null
+
+  async function handleCopyRevised() {
+    try {
+      await navigator.clipboard.writeText(revised)
+      setCopyState('copied')
+      window.setTimeout(() => setCopyState('idle'), 1600)
+    } catch {
+      setCopyState('failed')
+      window.setTimeout(() => setCopyState('idle'), 1800)
+    }
+  }
 
   return (
     <section className="content-section article-compare-section">
@@ -412,6 +651,10 @@ function ArticleCompare({ original, revised }: { original: string; revised: stri
           <h2>发布稿对照</h2>
           <p className="muted">左边是原文，右边是按个人风格和公众号阅读节奏改过后的版本。</p>
         </div>
+        <button className="secondary compact" onClick={handleCopyRevised} type="button">
+          {copyState === 'copied' ? <Check size={15} /> : <Copy size={15} />}
+          {copyState === 'copied' ? '已复制' : copyState === 'failed' ? '复制失败' : '复制修改稿'}
+        </button>
       </div>
       <div className="article-compare-grid">
         <article className="article-version">
@@ -638,13 +881,30 @@ function TagLine({ label, items }: { label: string; items: string[] }) {
   )
 }
 
-function resizeTextarea(element: HTMLTextAreaElement | null) {
-  if (!element) return
-  element.style.height = 'auto'
-  element.style.height = `${element.scrollHeight}px`
+function modeLabel(mode?: OptimizationMode) {
+  return optimizationModes.find(item => item.value === mode)?.label || '发布稿'
 }
 
-function defaultModelLabel(options: ModelOption[]) {
-  const defaultOption = options.find(option => option.is_default)
-  return defaultOption ? `（${defaultOption.label}）` : ''
+function priorityLabel(priority: PersonaSuggestion['priority']) {
+  if (priority === 'high') return '高'
+  if (priority === 'low') return '低'
+  return '中'
+}
+
+function engineLabel(engine?: string) {
+  if (engine === 'langgraph') return 'LangGraph StateGraph'
+  if (engine === 'classic') return '本地顺序编排'
+  if (engine === 'demo-local') return 'Demo 本地输出'
+  return engine || '工作流'
+}
+
+function workflowStepLabel(step: string) {
+  const labels: Record<string, string> = {
+    normalize: '输入归一',
+    review_sources: '并行审查',
+    assess_and_rewrite: '评估改写',
+    build_publish_gate: '发布门槛',
+    summarize_optimization: '画像建议',
+  }
+  return labels[step] || step
 }

@@ -2,6 +2,8 @@ import { ReactNode, useEffect, useRef, useState } from 'react'
 import {
   Brain,
   BookOpen,
+  Check,
+  Copy,
   Download,
   FileText,
   RotateCcw,
@@ -10,6 +12,7 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
+import type { ApiStatus } from '../App'
 import {
   exportArticleContent,
   getModelOptions,
@@ -28,6 +31,7 @@ import FactReviewPanel from '../components/FactReviewPanel'
 import StyleProfilePanel from '../components/StyleProfilePanel'
 import SourceCards from '../components/SourceCards'
 import IdeaBriefPanel from '../components/IdeaBriefPanel'
+import { defaultModelLabel, resizeTextarea } from '../utils/form'
 
 type ResultView = 'draft' | 'quality' | 'outline' | 'research'
 
@@ -46,13 +50,17 @@ const demoInput = {
   style: '真诚、自然、有个人感',
 }
 
-export default function WritingStudio() {
-  const [materialTitle, setMaterialTitle] = useState('读《深度工作》的思考')
-  const [sourceName, setSourceName] = useState('深度工作')
-  const [content, setContent] = useState('今天读《深度工作》，我发现现在很多人不是没有时间，而是注意力被短视频和社交软件切碎了。真正重要的不是每天学多久，而是有没有连续专注的时间。')
+interface WritingStudioProps {
+  apiStatus: ApiStatus
+}
+
+export default function WritingStudio({ apiStatus }: WritingStudioProps) {
+  const [materialTitle, setMaterialTitle] = useState('')
+  const [sourceName, setSourceName] = useState('')
+  const [content, setContent] = useState('')
   const [platform, setPlatform] = useState('wechat')
   const [style, setStyle] = useState('真诚、自然、有个人感')
-  const [targetReader, setTargetReader] = useState('大学生和自学者')
+  const [targetReader, setTargetReader] = useState('公众号读者 / 自学者')
   const [targetLength, setTargetLength] = useState(1200)
   const [llmModel, setLlmModel] = useState('')
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
@@ -72,6 +80,7 @@ export default function WritingStudio() {
   const [error, setError] = useState('')
   const [exportPath, setExportPath] = useState('')
   const [activeView, setActiveView] = useState<ResultView>('draft')
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
 
   const ideaInputRef = useRef<HTMLTextAreaElement | null>(null)
   const articleEditorRef = useRef<HTMLTextAreaElement | null>(null)
@@ -109,6 +118,10 @@ export default function WritingStudio() {
   }, [editedArticle, activeView])
 
   async function handleGenerate() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再生成。')
+      return
+    }
     setError('')
     setExportPath('')
     setStyleMemoryStatus('')
@@ -145,7 +158,23 @@ export default function WritingStudio() {
     }
   }
 
+  function handleUseSample() {
+    setMaterialTitle(demoInput.materialTitle)
+    setSourceName(demoInput.sourceName)
+    setContent(demoInput.content)
+    setStyle(demoInput.style)
+    setTargetReader(demoInput.targetReader)
+    setSelectedTopic('')
+    setStyleReference('')
+    setExportPath('')
+    setError('')
+  }
+
   async function handleRunDemo() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再运行 Demo。')
+      return
+    }
     setError('')
     setExportPath('')
     setStyleMemoryStatus('')
@@ -193,6 +222,10 @@ export default function WritingStudio() {
   }
 
   async function handleExport() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再导出。')
+      return
+    }
     if (!result?.article_id) return
     try {
       const data = await exportArticleContent(result.article_id, {
@@ -209,6 +242,10 @@ export default function WritingStudio() {
   }
 
   async function handleLearnStyle() {
+    if (!apiReady) {
+      setError('后端未连接，启动 backend 后再学习风格。')
+      return
+    }
     if (!result || editedArticle.trim().length < 20) return
 
     setError('')
@@ -238,14 +275,28 @@ export default function WritingStudio() {
     setExportPath('')
   }
 
+  async function handleCopyDraft() {
+    if (!editedArticle.trim()) return
+    try {
+      await navigator.clipboard.writeText(editedArticle)
+      setCopyStatus('copied')
+      window.setTimeout(() => setCopyStatus('idle'), 1600)
+    } catch {
+      setError('复制失败，请手动选中文章内容复制。')
+    }
+  }
+
+  const apiReady = apiStatus === 'online'
+  const backendActionTitle = apiReady ? undefined : '请先启动后端服务'
   const draftChanged = Boolean(result && editedArticle !== result.article)
   const styleMemoryCount = styleMemory?.sample_count || 0
   const styleMemorySummary = styleMemory?.profile?.voice_summary
   const articleTitle = result?.titles?.[0] || result?.selected_topic || '未生成'
   const risk = result?.fact_review?.overall_risk || 'low'
+  const contentLength = content.trim().length
 
   return (
-    <main className="studio-shell">
+    <main className={loading ? 'studio-shell writing-shell is-loading' : 'studio-shell writing-shell'}>
         {error && <div className="error">{error}</div>}
 
         <section className="compose-section">
@@ -255,11 +306,15 @@ export default function WritingStudio() {
               <h2>写作素材</h2>
             </div>
             <div className="heading-actions">
-              <button className="secondary" onClick={handleRunDemo} disabled={loading}>
+              <button className="secondary" onClick={handleUseSample} disabled={loading}>
+                <BookOpen size={18} />
+                填入示例
+              </button>
+              <button className="secondary" onClick={handleRunDemo} disabled={loading || !apiReady} title={backendActionTitle}>
                 <Sparkles size={18} />
                 运行 Demo
               </button>
-              <button className="primary" onClick={handleGenerate} disabled={loading}>
+              <button className="primary" onClick={handleGenerate} disabled={loading || !apiReady} title={backendActionTitle}>
                 <Sparkles size={18} />
                 {loading ? '生成中...' : result ? '重新生成' : '生成草稿'}
               </button>
@@ -271,7 +326,11 @@ export default function WritingStudio() {
               <div className="primary-input-grid">
                 <div>
                   <label>素材标题</label>
-                  <input value={materialTitle} onChange={e => setMaterialTitle(e.target.value)} />
+                  <input
+                    value={materialTitle}
+                    onChange={e => setMaterialTitle(e.target.value)}
+                    placeholder="例如：读《深度工作》的思考"
+                  />
                 </div>
                 <div>
                   <label>平台</label>
@@ -291,6 +350,10 @@ export default function WritingStudio() {
                 placeholder="把读书笔记、摘录或粗糙想法放在这里"
                 rows={10}
               />
+              <div className="input-meta">
+                <span>{contentLength} 字符</span>
+                <span>目标 {targetLength} 字</span>
+              </div>
 
               <div className="quick-setting-grid">
                 <div>
@@ -477,12 +540,22 @@ export default function WritingStudio() {
                           <button
                             className="secondary"
                             onClick={handleLearnStyle}
-                            disabled={styleMemoryLoading || editedArticle.trim().length < 20}
+                            disabled={styleMemoryLoading || editedArticle.trim().length < 20 || !apiReady}
+                            title={backendActionTitle}
                           >
                             <Brain size={16} />
                             {styleMemoryLoading ? '学习中...' : '学习风格'}
                           </button>
-                          <button className="secondary" onClick={handleExport} disabled={!result.article_id || !editedArticle.trim()}>
+                          <button className="secondary" onClick={handleCopyDraft} disabled={!editedArticle.trim()}>
+                            {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
+                            {copyStatus === 'copied' ? '已复制' : '复制'}
+                          </button>
+                          <button
+                            className="secondary"
+                            onClick={handleExport}
+                            disabled={!result.article_id || !editedArticle.trim() || !apiReady}
+                            title={backendActionTitle}
+                          >
                             <Download size={16} />
                             导出
                           </button>
@@ -561,6 +634,12 @@ export default function WritingStudio() {
             <div>
               <BookOpen size={26} />
               <h2>暂无草稿</h2>
+              <p>粘贴笔记或填入示例后，选题、大纲、草稿和审稿结果会在这里展开。</p>
+              <div className="empty-checks single-column">
+                <span><Sparkles size={16} /> 先选题再成文</span>
+                <span><ShieldCheck size={16} /> 生成后自动审稿</span>
+                <span><Download size={16} /> 最终稿可导出 Markdown</span>
+              </div>
             </div>
             <AgentStepTimeline loading={loading} hasResult={false} />
           </section>
@@ -579,15 +658,4 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
       </div>
     </div>
   )
-}
-
-function resizeTextarea(element: HTMLTextAreaElement | null) {
-  if (!element) return
-  element.style.height = 'auto'
-  element.style.height = `${element.scrollHeight}px`
-}
-
-function defaultModelLabel(options: ModelOption[]) {
-  const defaultOption = options.find(option => option.is_default)
-  return defaultOption ? `（${defaultOption.label}）` : ''
 }

@@ -192,6 +192,22 @@ def build_demo_assessment(payload: ArticleAssessmentRequest) -> dict:
             "matched_traits": ["真诚", "自然", "不夸张"],
             "off_track_traits": ["中段略偏概念解释"],
         },
+        "persona_guidance": [
+            {
+                "priority": "medium",
+                "profile_signal": "常用开头：从一个具体生活场景切入",
+                "article_gap": "开头先抛判断，读者代入稍慢。",
+                "suggestion": "先写晚上复盘却说不出进展的画面，再落到“注意力被切碎”。",
+                "example": "你可能也有过这样的晚上：明明忙了一整天，却说不出自己真正完成了什么。",
+            },
+            {
+                "priority": "medium",
+                "profile_signal": "避免：空泛鸡汤、没有来源的绝对判断",
+                "article_gap": "中段关于《深度工作》的概括还缺少来源线索。",
+                "suggestion": "补上作者、章节或页码，绝对化表达改成“我理解为”。",
+                "example": "我更愿意把它理解成：连续注意力，是把输入变成理解的前提。",
+            },
+        ],
         "editorial_checklist": [
             {
                 "item": "开头钩子",
@@ -283,6 +299,57 @@ def build_demo_assessment(payload: ArticleAssessmentRequest) -> dict:
         ],
     }
 
+    revised_article = "" if payload.optimization_mode == "advice_only" else DEMO_REVISED_ARTICLE
+    persona_suggestions = [
+        {
+            "priority": "medium",
+            "profile_signal": "常用开头：从一个具体生活场景切入",
+            "article_gap": "开头可以更贴近日常场景。",
+            "suggestion": "用“忙了一天却无进展”的画面替换抽象判断。",
+            "example": "你可能也有过这样的晚上：明明忙了一整天，却说不出自己真正完成了什么。",
+        },
+        {
+            "priority": "medium",
+            "profile_signal": "修订规则：中段补证据",
+            "article_gap": "书籍观点缺少来源支撑。",
+            "suggestion": "补充《深度工作》的作者、章节或具体出处。",
+            "example": "",
+        },
+        {
+            "priority": "low",
+            "profile_signal": "已匹配：真诚",
+            "article_gap": "这部分个人表达可以保留。",
+            "suggestion": "保留克制语气，只修结构、来源和开头画面。",
+            "example": "真诚",
+        },
+    ] if payload.use_style_memory else []
+
+    optimization = {
+        "mode": payload.optimization_mode,
+        "mode_label": {
+            "advice_only": "只给优化建议",
+            "light_polish": "轻度润色",
+            "publish_ready": "发布稿改写",
+        }.get(payload.optimization_mode, "发布稿改写"),
+        "summary": assessment["overall_summary"],
+        "focus_areas": ["opening", "evidence", "voice"],
+        "quick_wins": [
+            "把开头换成一个具体生活场景。",
+            "补充《深度工作》的来源线索。",
+            "把行动建议收束成一个 60 分钟练习。",
+        ],
+        "style_profile_used": payload.use_style_memory,
+        "persona_signal_count": len(persona_suggestions),
+        "risk_notes": [
+            "关于书籍观点的概括建议补充来源。",
+        ],
+        "next_action": "先补一个真实场景，再把抽象观点落到 60 分钟专注练习。",
+        "score_before": review["score"],
+        "target_score": 88,
+        "expected_score_lift": "优先冲到 88+，重点处理低分维度。",
+        "rewrite_generated": bool(revised_article),
+    }
+
     return {
         "title": title,
         "input_title": payload.title.strip(),
@@ -312,12 +379,22 @@ def build_demo_assessment(payload: ArticleAssessmentRequest) -> dict:
         "review": review,
         "fact_review": fact_review,
         "original_article": content,
-        "revised_article": DEMO_REVISED_ARTICLE,
+        "revised_article": revised_article,
         "assessment": assessment,
         "publish_gate": publish_gate,
         "style_profile": _demo_style_profile(),
         "style_memory_used": payload.use_style_memory,
         "llm_model": "demo-local",
+        "optimization": optimization,
+        "optimization_mode": payload.optimization_mode,
+        "persona_suggestions": persona_suggestions,
+        "workflow_trace": [
+            {"step": "normalize", "status": "done", "note": "整理标题、平台、目标读者和本地画像。"},
+            {"step": "review_sources", "status": "done", "note": "并行完成质量审稿、事实风险审查和标题候选。"},
+            {"step": "assess_and_rewrite", "status": "done", "note": "Demo 模式展示编辑体检和文章优化。"},
+            {"step": "summarize_optimization", "status": "done", "note": "把本地画像信号转换成可执行建议。"},
+        ],
+        "workflow_engine": "demo-local",
     }
 
 

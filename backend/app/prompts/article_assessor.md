@@ -46,6 +46,15 @@
     "matched_traits": ["符合的风格特征"],
     "off_track_traits": ["偏离的风格特征"]
   },
+  "persona_guidance": [
+    {
+      "priority": "high | medium | low",
+      "profile_signal": "来自用户写作风格档案的具体信号，例如常用开头/句式/避免项/修订规则",
+      "article_gap": "当前文章与这个信号的差距",
+      "suggestion": "依据本地画像给出的具体修改建议",
+      "example": "不超过 120 字的替换示例；不需要则为空字符串"
+    }
+  ],
   "editorial_checklist": [
     {
       "item": "开头钩子",
@@ -111,6 +120,7 @@ editorial_checklist 至少包含这些 item：
 注意：
 
 - 如果用户写作风格档案为空，请说明“暂无稳定风格档案”，不要编造偏好。
+- 如果用户写作风格档案不为空，persona_guidance 必须给 2-4 条建议，并明确引用档案中的具体信号。
 - 如果已有文章检查或事实审查指出高优先级问题，你必须把它们纳入 priority_fixes。
 - 如果文章事实风险为 high，publish_decision 必须是 hold。
 - practical_revision_plan 按优先级排序，最多 5 步。

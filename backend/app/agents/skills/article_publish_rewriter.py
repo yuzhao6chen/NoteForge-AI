@@ -19,6 +19,7 @@ class ArticlePublishRewriterSkill:
         style_profile: dict,
         review: dict,
         fact_review: dict,
+        optimization_mode: str = "publish_ready",
     ) -> str:
         user_prompt = f"""
 文章标题：
@@ -29,6 +30,9 @@ class ArticlePublishRewriterSkill:
 
 目标读者：
 {target_reader}
+
+优化模式：
+{optimization_mode}
 
 个人写作风格档案：
 {json.dumps(style_profile, ensure_ascii=False, indent=2) if style_profile else "暂无稳定风格档案。"}

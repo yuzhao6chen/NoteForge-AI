@@ -41,7 +41,10 @@ export interface ArticleAssessmentRequest {
   target_reader: string
   use_style_memory: boolean
   llm_model?: string
+  optimization_mode: OptimizationMode
 }
+
+export type OptimizationMode = 'advice_only' | 'light_polish' | 'publish_ready'
 
 export interface Topic {
   title: string
@@ -189,11 +192,42 @@ export interface SectionDiagnosis {
   rewrite_hint?: string
 }
 
+export interface PersonaSuggestion {
+  priority: 'high' | 'medium' | 'low'
+  profile_signal: string
+  article_gap: string
+  suggestion: string
+  example?: string
+}
+
+export interface OptimizationSummary {
+  mode: OptimizationMode
+  mode_label: string
+  summary?: string
+  focus_areas: string[]
+  quick_wins: string[]
+  style_profile_used: boolean
+  persona_signal_count: number
+  risk_notes: string[]
+  next_action: string
+  score_before?: number | null
+  target_score: number
+  expected_score_lift: string
+  rewrite_generated: boolean
+}
+
+export interface WorkflowTraceItem {
+  step: string
+  status: string
+  note: string
+}
+
 export interface ArticleAssessment {
   publish_decision?: 'ready' | 'revise' | 'hold'
   overall_summary?: string
   core_diagnosis?: CoreDiagnosis
   style_alignment?: StyleAlignment
+  persona_guidance?: PersonaSuggestion[]
   editorial_checklist?: EditorialChecklistItem[]
   priority_fixes?: PriorityFix[]
   practical_revision_plan?: PracticalRevisionStep[]
@@ -218,6 +252,11 @@ export interface ArticleAssessmentResult {
   style_profile: StyleProfile
   style_memory_used?: boolean
   llm_model?: string
+  optimization?: OptimizationSummary
+  optimization_mode?: OptimizationMode
+  persona_suggestions?: PersonaSuggestion[]
+  workflow_trace?: WorkflowTraceItem[]
+  workflow_engine?: string
   assessment_run_id?: string
   assessment_run_path?: string
 }

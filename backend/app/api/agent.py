@@ -169,6 +169,7 @@ def assess_article(payload: ArticleAssessmentRequest):
         target_reader=payload.target_reader,
         style_profile=style_profile,
         llm_model=payload.llm_model,
+        optimization_mode=payload.optimization_mode,
     )
 
     run_saved = storage.save_agent_run(

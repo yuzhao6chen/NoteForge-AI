@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="README.zh-CN.md">中文 README</a> ·
+  <a href="#preview">Preview</a> ·
   <a href="#why-it-exists">Why</a> ·
   <a href="#features">Features</a> ·
   <a href="#quick-start">Quick Start</a> ·
@@ -21,9 +22,25 @@
   <img alt="BYOK" src="https://img.shields.io/badge/BYOK-OpenAI%20compatible-blue.svg" />
 </p>
 
+## Preview
+
+<p align="center">
+  <img alt="NoteForge-AI writing workspace" src="frontend/public/noteforge-writing-studio.png" />
+</p>
+
 NoteForge-AI is a self-hosted writing workspace for people who read, take notes, and publish long-form ideas. It turns messy notes, excerpts, and half-formed thoughts into a visible writing pipeline: material parsing, idea clarification, optional web research, topic generation, outline drafting, article writing, quality review, fact-risk review, revision, title generation, and Markdown export.
 
 The project is intentionally not a "one-click content farm". Its goal is to let AI handle the heavy first pass while keeping the author's thinking, judgment, and voice in the loop.
+
+## At a Glance
+
+| What you can try | Why it matters |
+| --- | --- |
+| `写草稿` writing workspace | Paste messy reading notes and watch the pipeline turn them into topic angles, an outline, a draft, review signals, and exportable Markdown. |
+| `体检文章` assessment workspace | Paste a finished article and get a publish / revise / hold gate, title candidates, rewrite suggestions, and fact-risk review. |
+| Local demo endpoints | Explore the product flow before adding an API key. |
+| OpenAI-compatible provider setup | Bring your own OpenAI, DeepSeek, Qwen, or gateway key without changing the app code. |
+| Style memory | Let final drafts update a lightweight local writing profile that can influence later edits. |
 
 ## Why It Exists
 
@@ -41,6 +58,9 @@ Most AI writing tools start from a prompt and end with a generic draft. NoteForg
 - Generate topic candidates, outlines, full drafts, and title options.
 - Run article quality review with score breakdowns and revision targets.
 - Check risky factual claims and suggest safer wording or citation needs.
+- Use three article optimization modes on the assessment page: advice only, light polish, or publish-ready rewrite.
+- Generate profile-driven suggestions that show which local style-memory signals affected the edit priorities.
+- Orchestrate the article optimization path with LangGraph StateGraph, leaving room for future human approval, RAG, and diff nodes.
 - Use a WeChat deep-polish mode for stronger openings, mobile reading rhythm, section headings, and endings.
 - Learn reusable writing style from final drafts.
 - Export drafts as Markdown for WeChat, blogs, newsletters, or personal knowledge bases.
@@ -62,10 +82,12 @@ flowchart LR
   G --> H[Draft]
   H --> I[Quality review]
   I --> J[Fact-risk review]
-  J --> K[Auto revision]
-  K --> L[WeChat polish]
-  L --> M[Title options]
-  M --> N[Markdown export]
+  J --> K[Profile-driven optimization advice]
+  K --> L{Optimization mode}
+  L -->|Advice only| M[Publishing advice]
+  L -->|Polish / rewrite| N[Optimized article]
+  N --> O[Title options]
+  O --> P[Markdown export]
 ```
 
 ## Architecture
@@ -89,10 +111,22 @@ flowchart TB
 Core files:
 
 - `backend/app/agents/noteforge_agent.py`
+- `backend/app/agents/graphs/article_optimization_graph.py`
 - `backend/app/agents/skills/`
 - `backend/app/agents/tools/`
 - `frontend/src/pages/WritingStudio.tsx`
 - `frontend/src/pages/ArticleAssessment.tsx`
+
+## Where to Look First
+
+| Area | Files |
+| --- | --- |
+| Main agent pipeline | `backend/app/agents/noteforge_agent.py`, `backend/app/agents/graphs/article_optimization_graph.py` |
+| Prompt behavior | `backend/app/prompts/` |
+| Demo data | `backend/app/agents/demo_data.py` |
+| API contracts | `backend/app/schemas/agent.py`, `frontend/src/api/agent.ts` |
+| Product UI | `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/style.css` |
+| Example material | `examples/` |
 
 ## Tech Stack
 
@@ -100,7 +134,7 @@ Core files:
 | --- | --- |
 | Frontend | React, TypeScript, Vite, lucide-react |
 | Backend | FastAPI, Pydantic, SQLAlchemy |
-| Agent | OpenAI-compatible Chat Completions API |
+| Agent | LangGraph orchestration + OpenAI-compatible Chat Completions API |
 | Search | Tavily Search API |
 | Storage | Local Markdown / JSON files |
 | Deployment | Docker Compose |

@@ -1,5 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
-from contextvars import copy_context
+from app.agents.graphs import ArticleOptimizationGraph
 from app.agents.skills.material_parser import MaterialParserSkill
 from app.agents.skills.search_query_generator import SearchQueryGeneratorSkill
 from app.agents.skills.research_digest import ResearchDigestSkill
@@ -41,6 +40,7 @@ class NoteForgeAgent:
         self.article_assessor = ArticleAssessorSkill()
         self.article_publish_rewriter = ArticlePublishRewriterSkill()
         self.web_search = WebSearchTool()
+        self.article_optimization_graph = ArticleOptimizationGraph(self)
 
     def parse_material(self, title: str, content: str, source_type: str, source_name: str) -> dict:
         return self.material_parser.run(title, content, source_type, source_name)
@@ -121,92 +121,17 @@ class NoteForgeAgent:
         target_reader: str = "公众号读者",
         style_profile: Optional[dict] = None,
         llm_model: Optional[str] = None,
+        optimization_mode: str = "publish_ready",
     ) -> dict:
-        with use_llm_model(llm_model):
-            normalized_title = title.strip() if title else ""
-            review_title = normalized_title or "未命名文章"
-            profile = style_profile or {}
-
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                review_future = self._submit_with_context(
-                    executor,
-                    self.review_article,
-                    review_title,
-                    content,
-                    platform,
-                )
-                fact_review_future = self._submit_with_context(
-                    executor,
-                    self.review_facts,
-                    content,
-                    "",
-                    [],
-                )
-                title_options_future = self._submit_with_context(
-                    executor,
-                    self._safe_generate_title_options,
-                    content,
-                    platform,
-                    profile,
-                    target_reader,
-                )
-
-                review = review_future.result()
-                fact_review = fact_review_future.result()
-
-                assessment_future = self._submit_with_context(
-                    executor,
-                    self.article_assessor.run,
-                    normalized_title,
-                    content,
-                    platform,
-                    target_reader,
-                    profile,
-                    review,
-                    fact_review,
-                )
-                revised_article_future = self._submit_with_context(
-                    executor,
-                    self.article_publish_rewriter.run,
-                    normalized_title,
-                    content,
-                    platform,
-                    target_reader,
-                    profile,
-                    review,
-                    fact_review,
-                )
-
-                assessment = assessment_future.result()
-                revised_article = revised_article_future.result()
-                title_options = title_options_future.result()
-
-            if not isinstance(assessment, dict):
-                assessment = {}
-            publish_gate = self._build_assessment_gate(review, fact_review, assessment)
-            titles = [option["title"] for option in title_options]
-
-            return {
-                "title": normalized_title or (titles[0] if titles else "未命名文章"),
-                "input_title": normalized_title,
-                "titles": titles,
-                "title_options": title_options,
-                "platform": platform,
-                "target_reader": target_reader,
-                "review": review,
-                "fact_review": fact_review,
-                "original_article": content,
-                "revised_article": revised_article,
-                "assessment": assessment,
-                "publish_gate": publish_gate,
-                "style_profile": profile,
-                "style_memory_used": bool(profile),
-                "llm_model": llm_model or settings.openai_model,
-            }
-
-    def _submit_with_context(self, executor: ThreadPoolExecutor, func, *args):
-        context = copy_context()
-        return executor.submit(lambda: context.run(func, *args))
+        return self.article_optimization_graph.run(
+            title=title,
+            content=content,
+            platform=platform,
+            target_reader=target_reader,
+            style_profile=style_profile,
+            llm_model=llm_model,
+            optimization_mode=optimization_mode,
+        )
 
     def _safe_generate_title_options(
         self,
